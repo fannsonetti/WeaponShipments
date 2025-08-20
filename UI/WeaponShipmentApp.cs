@@ -24,12 +24,24 @@ namespace WeaponShipments.UI
     {
         public static WeaponShipmentApp Instance { get; private set; }
 
+        public enum PropertyType
+        {
+            Warehouse,
+            Bunker
+        }
+
+        // Selected property for this session (can be persisted later via save data if desired)
+        public static PropertyType ActiveProperty { get; private set; } = PropertyType.Warehouse;
+
+
+
         private static bool _conversionRoutineStarted;
         private static bool _raidRoutineStarted;
 
         private static bool _supplyShipmentRoutineStarted;
 
         private GameObject _loginPanel;
+        private GameObject _propertySelectPanel;
         private GameObject _homePanel;
 
         private GameObject _homePage;
@@ -122,6 +134,16 @@ namespace WeaponShipments.UI
                 );
                 BuildLoginUI(_loginPanel.transform);
 
+                // Property select root
+                _propertySelectPanel = UIFactory.Panel(
+                    "PropertySelectPanel",
+                    container.transform,
+                    new Color(0.1f, 0.1f, 0.1f),
+                    fullAnchor: true
+                );
+                _propertySelectPanel.SetActive(false);
+                BuildPropertySelectUI(_propertySelectPanel.transform);
+
                 // Main/home root
                 _homePanel = UIFactory.Panel(
                     "HomePanel",
@@ -141,6 +163,7 @@ namespace WeaponShipments.UI
         protected override void OnPhoneClosed()
         {
             if (_loginPanel != null) _loginPanel.SetActive(true);
+            if (_propertySelectPanel != null) _propertySelectPanel.SetActive(false);
             if (_homePanel != null) _homePanel.SetActive(false);
 
             Controls.IsTyping = false;
@@ -224,12 +247,126 @@ namespace WeaponShipments.UI
             ButtonUtils.AddListener(enterButton, OnLoginClicked);
         }
 
+        private void BuildPropertySelectUI(Transform parent)
+        {
+            var bg = UIFactory.Panel(
+                "PropertySelectBG",
+                parent,
+                new Color(0.1f, 0.1f, 0.1f),
+                fullAnchor: true
+            );
+
+            // Center cube
+            var cube = UIFactory.Panel(
+                "PropertySelectCube",
+                bg.transform,
+                new Color(0.08f, 0.08f, 0.08f),
+                new Vector2(0.3f, 0.3f),
+                new Vector2(0.7f, 0.7f)
+            );
+
+            // Top bar
+            var topBar = UIFactory.Panel(
+                "PropertySelectTopBar",
+                cube.transform,
+                new Color(0.05f, 0.05f, 0.05f, 1f)
+            );
+            var topRT = topBar.GetComponent<RectTransform>();
+            topRT.anchorMin = new Vector2(0f, 0.65f);
+            topRT.anchorMax = new Vector2(1f, 1f);
+            topRT.offsetMin = Vector2.zero;
+            topRT.offsetMax = Vector2.zero;
+
+            CreateBrandingLogo(topBar.transform, 34, 20);
+
+            // Red line under the bar
+            var divider = UIFactory.Panel(
+                "PropertySelectDivider",
+                cube.transform,
+                new Color(0.7f, 0.05f, 0.05f, 1f)
+            );
+            var divRT = divider.GetComponent<RectTransform>();
+            divRT.anchorMin = new Vector2(0f, 0.63f);
+            divRT.anchorMax = new Vector2(1f, 0.65f);
+            divRT.offsetMin = Vector2.zero;
+            divRT.offsetMax = Vector2.zero;
+
+            var title = UIFactory.Text(
+                "PropertySelectTitle",
+                "SELECT PROPERTY",
+                cube.transform,
+                22,
+                TextAnchor.UpperCenter,
+                FontStyle.Bold
+            );
+            title.color = Color.white;
+            var titleRT = title.GetComponent<RectTransform>();
+            titleRT.anchorMin = new Vector2(0.05f, 0.47f);
+            titleRT.anchorMax = new Vector2(0.95f, 0.62f);
+            titleRT.offsetMin = Vector2.zero;
+            titleRT.offsetMax = Vector2.zero;
+
+            // Buttons row
+            var buttonRow = UIFactory.ButtonRow(
+                "PropertySelectButtonRow",
+                cube.transform,
+                spacing: 18,
+                alignment: TextAnchor.MiddleCenter
+            );
+            var brt = buttonRow.GetComponent<RectTransform>();
+            brt.anchorMin = new Vector2(0f, 0.15f);
+            brt.anchorMax = new Vector2(1f, 0.40f);
+            brt.offsetMin = Vector2.zero;
+            brt.offsetMax = Vector2.zero;
+
+            // Warehouse
+            var (_, warehouseBtn, warehouseLabel) = UIFactory.RoundedButtonWithLabel(
+                "WarehouseButton",
+                "Warehouse",
+                buttonRow.transform,
+                new Color(0.8f, 0.1f, 0.1f),
+                220,
+                60,
+                20,
+                Color.white
+            );
+            if (warehouseLabel != null)
+                warehouseLabel.alignment = TextAnchor.MiddleCenter;
+            ButtonUtils.AddListener(warehouseBtn, () => OnPropertySelected(PropertyType.Warehouse));
+
+            // Bunker
+            var (_, bunkerBtn, bunkerLabel) = UIFactory.RoundedButtonWithLabel(
+                "BunkerButton",
+                "Bunker",
+                buttonRow.transform,
+                new Color(0.35f, 0.0f, 0.0f),
+                220,
+                60,
+                20,
+                Color.white
+            );
+            if (bunkerLabel != null)
+                bunkerLabel.alignment = TextAnchor.MiddleCenter;
+            ButtonUtils.AddListener(bunkerBtn, () => OnPropertySelected(PropertyType.Bunker));
+        }
+
+        private void OnPropertySelected(PropertyType property)
+        {
+            ActiveProperty = property;
+
+            if (_propertySelectPanel != null) _propertySelectPanel.SetActive(false);
+            if (_homePanel != null) _homePanel.SetActive(true);
+
+            SetActivePage(_homePage);
+            UpdateBars();
+
+            Msg($"[WeaponShipmentApp] Property selected: {property}");
+        }
+
         private void OnLoginClicked()
         {
             if (_loginPanel != null) _loginPanel.SetActive(false);
-            if (_homePanel != null) _homePanel.SetActive(true);
-            SetActivePage(_homePage);
-            UpdateBars();
+            if (_propertySelectPanel != null) _propertySelectPanel.SetActive(true);
         }
 
         // ---------------- ALERT BAR ----------------
@@ -388,14 +525,6 @@ namespace WeaponShipments.UI
 
                         // Mark resupply complete for stats
                         BusinessState.RegisterResupplyJobCompleted();
-
-
-                        // Roll chance for a "buy bust" on paid deliveries (tiered by TotalEarnings).
-                        float buyBustChance = GetBuyBustChanceForEarnings(BusinessState.TotalEarnings);
-                        if (UnityEngine.Random.value < buyBustChance)
-                        {
-                            ShipmentBusts.TriggerBuyBust();
-                        }
 
                         // Notify Agent 28 that a shipment (not instant buy) arrived
                         Agent28.NotifySuppliesArrived(

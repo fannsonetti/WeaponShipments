@@ -37,28 +37,12 @@ namespace WeaponShipments.NPCs
                     "Sewer Market",
                     new[]
                     {
-                        new Vector3(72.6435f, -5.5350f, 22.9032f),
-                        new Vector3(72.5811f, -5.5350f, 38.9382f),
-                        new Vector3(79.9473f, -5.535f, 29.7755f)
+                        new Vector3(79.7539f, -5.535f, 28.9794f),
+                        new Vector3(80.4278f, -5.535f, 31.4929f),
+                        new Vector3(78.6597f, -5.535f, 32.7226f)
                     }
                 }
             };
-
-        public static void TriggerBuyBust()
-        {
-            var player = Player.Local;
-            if (player == null)
-            {
-                MelonLogger.Warning("[ShipmentBusts] No local player; cannot trigger buy bust.");
-                return;
-            }
-
-            // Buy busts: light escalation + proper dispatch via S1API
-            LawManager.SetWantedLevel(player, PursuitLevel.Investigating);
-            LawManager.CallPolice(player);
-
-            MelonLogger.Msg("[ShipmentBusts] Buy bust triggered (paid resupply delivery).");
-        }
 
         public static void TryTriggerBust(string shipmentId, Vector3 cratePosition)
         {
@@ -100,26 +84,26 @@ namespace WeaponShipments.NPCs
             PursuitLevel targetPursuitLevel;
             float bustChance; // 0–1
 
-            if (earnings < 25000f)
+            if (earnings < WeaponShipmentsPrefs.BuyBustTier1MaxEarnings.Value)
             {
                 targetPursuitLevel = PursuitLevel.NonLethal;
                 minCops = 2;
                 maxCops = 3;
-                bustChance = 0.05f;
+                bustChance = WeaponShipmentsPrefs.BuyBustChanceTier1.Value;
             }
-            else if (earnings < 100000f)
+            else if (earnings < WeaponShipmentsPrefs.BuyBustTier2MaxEarnings.Value)
             {
                 targetPursuitLevel = PursuitLevel.Lethal;
                 minCops = 2;
                 maxCops = 4;
-                bustChance = 0.10f;
+                bustChance = WeaponShipmentsPrefs.BuyBustChanceTier2.Value;
             }
             else
             {
                 targetPursuitLevel = PursuitLevel.Lethal;
                 minCops = 4;
                 maxCops = 7;
-                bustChance = 0.15f;
+                bustChance = WeaponShipmentsPrefs.BuyBustChanceTier3.Value;
             }
 
             // 🎲 Bust percentage roll
@@ -133,6 +117,8 @@ namespace WeaponShipments.NPCs
             // Apply wanted level via S1API LawManager
             // Docs: LawManager.SetWantedLevel(Player target, PursuitLevel level) :contentReference[oaicite:2]{index=2}
             LawManager.SetWantedLevel(player, targetPursuitLevel);
+            player.CrimeData.RecordLastKnownPosition(resetTimeSinceSighted: true);
+            LawManager.CallPolice(player);
 
             MelonLogger.Msg($"[ShipmentBusts] Set wanted level to {targetPursuitLevel} (earnings={earnings}).");
 
