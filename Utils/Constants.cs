@@ -5,15 +5,15 @@
         /// <summary>
         /// Mod information
         /// </summary>
-        public const string MOD_NAME = "S1NotesApp";
-        public const string MOD_VERSION = "1.1.0";
-        public const string MOD_AUTHOR = "Bars";
-        public const string MOD_DESCRIPTION = "Mod description...";
+        public const string MOD_NAME = "Weapon Shipments";
+        public const string MOD_VERSION = "0.1.0";
+        public const string MOD_AUTHOR = "FannsoNetti";
+        public const string MOD_DESCRIPTION = "a attempted remaster of the weaponshipments mod on nexus";
 
         /// <summary>
         /// MelonPreferences configuration
         /// </summary>
-        public const string PREFERENCES_CATEGORY = "S1NotesApp";
+        public const string PREFERENCES_CATEGORY = "Weapon Shipments";
 
         /// <summary>
         /// Default preference values

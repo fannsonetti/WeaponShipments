@@ -1,138 +1,93 @@
-# S1NotesApp
+Perfect — **clean, efficient, and polished** with a professional tone.
+I’ll now generate the **full README** using your approved structure and tone.
 
-A comprehensive notes application for Schedule I that integrates seamlessly with the in-game phone system.
+---
 
-## 📱 Overview
+# 📦 Weapon Shipments
 
-S1NotesApp adds a fully-featured notes application to your Schedule I phone, allowing you to create, edit, organize, and manage notes directly within the game. The app features a clean, intuitive interface with quest integration for starred notes.
+*A modular weapon–delivery contract system with dynamic routes, cooldowns, and payouts.*
 
-## ✨ Features
+## **Overview**
 
-### 📝 Note Management
-- **Create Notes**: Add new notes with custom titles and content
-- **Edit Notes**: Modify existing notes with a rich text editor
-- **Delete Notes**: Remove notes you no longer need
-- **Auto-Save**: Notes are automatically saved and persist between game sessions when you save the game normally
+Weapon Shipments adds a fully-featured delivery contract loop to the game.
+Each weapon type has its own shipment slot, randomly generated routes, quantities, and payouts.
+Using the in-game phone, players can accept, deliver, and complete shipments for cash rewards.
 
-### ⭐ Starred Notes
-- **Star Important Notes**: Mark important notes with a star for easy identification
-- **Quest Integration**: Starred notes automatically create quest entries in your quest log
-- **Visual Indicators**: Starred notes appear with a star icon and are sorted to the top of the list
+The system is designed to feel integrated, progression-friendly, and expandable for future updates.
 
-### 🎨 User Interface
-- **Split-Panel Design**: Notes list on the left, editor on the right
-- **Responsive Layout**: Clean, modern interface that fits the game's aesthetic
-- **Welcome Message**: Helpful guidance when no note is selected
-- **Custom Icons**: Embedded notes icon for consistent visual experience
+---
 
-### 💾 Data Persistence
-- **Save System Integration**: Uses S1API's save integration for per-save-slot data storage
-- **Cross-Session Persistence**: Notes are saved and loaded with the game
-- **Data Integrity**: Robust error handling and data validation
+## **Features**
 
-## 🚀 Installation
+* **7 permanent shipment slots** (one per weapon type).
+* **Dynamic routes** with randomized origins, destinations, and quantities.
+* **Interactive phone app** for managing shipments and tracking cooldowns.
+* **In-world crates** that scale based on quantity (1–3).
+* **Delivery zones** with visual markers, unique per destination.
+* **Per-weapon cooldown system** preventing spam and adding pacing.
+* **Payouts based on weapon tier**, with physical delivery required.
+* **Minimal UI** that updates automatically inside the phone app.
 
-### Prerequisites
-- **Schedule I** (Steam version)
-- **MelonLoader** (latest version)
-- **S1API** (required dependency)
+---
 
-### Installation Steps
-1. Download the latest release from the releases page
-2. Extract the mod files to your Schedule I installation directory
-3. Place the mod DLL in your `Mods/` folder
-4. Launch the game - the Notes app will appear on your phone
+## **How It Works**
 
-### File Structure
-```
-Schedule I/
-├── Mods/
-└── └── S1NotesApp.dll
-```
+1. **Accept a shipment** in the phone app (only one active at a time).
+2. **Pick up the spawned crate** at its origin location.
+3. **Deliver it to the highlighted zone** at the destination.
+4. **Complete the contract** in the phone app to receive your payout.
+5. The slot enters **cooldown**, then regenerates a new route.
 
-## 📖 Usage
+Simple, quick, and loop-friendly.
 
-### Opening the App
-1. Open your in-game phone
-2. Look for the "Notes" app icon
-3. Tap to open the Notes application
+---
 
-### Creating a Note
-1. Click the **"New"** button in the top-right corner
-2. Enter a title in the title field
-3. Write your note content in the body field
-4. Click **"Save"** to save the note
+## **Future Features (Planned)**
 
-### Editing a Note
-1. Click on any note in the left panel to select it
-2. The note will open in the editor on the right
-3. Make your changes
-4. Click **"Save"** to save changes or **"Cancel"** to discard them
+### **Weapon Smuggler Unlock System**
 
-### Starring Notes
-1. Open a note for editing
-2. Click the **"Star"** button to mark it as important
-3. Starred notes will:
-   - Appear at the top of the notes list
-   - Show a golden star icon
-   - Create a quest entry in your quest log
+A new progression framework tied directly to the criminal hierarchy.
 
-### Deleting Notes
-1. Open the note you want to delete
-2. Click the **"Delete"** button
-3. Confirm the deletion (note will be permanently removed)
+* The Weapon Shipments app will start **locked**.
+* Access is unlocked by speaking with the **Weapon Smuggler NPC**.
+* Higher ranks unlock higher-tier weapons for delivery.
 
-## 🔧 Technical Details
+**Planned unlock progression:**
 
-### Architecture
-- **Framework**: Built on S1API's PhoneApp system
-- **UI Framework**: Uses S1API's UIFactory for consistent styling
-- **Save System**: Integrates with S1API's ModSaveableRegistry
-- **Quest Integration**: Uses S1API's Quest system for starred notes
+* **Peddler 3** → Baseball Bat
+* **Hustler 3** → Machete
+* **Bagman 3** → Revolver
+* **Shot Caller 1** → M1911
+* **Underlord 1** → Pump Shotgun
+* **Baron 3** → AK-47
+* **Kingpin** → Minigun *(final tier)*
 
-### Dependencies
-- **S1API**: Core API for Schedule I modding
-- **MelonLoader**: Mod loader framework
-- **Unity Engine**: Game engine (via S1API)
+### **Vehicle Transport System**
 
-### File Structure
-```
-S1NotesApp/
-├── Apps/
-│   ├── NotesApp.cs          # Main phone app implementation
-│   └── notes.png            # Embedded app icon
-├── Services/
-│   └── NotesManager.cs      # Note data management
-├── Quests/
-│   └── StarredNoteQuest.cs  # Quest integration for starred notes
-├── Integrations/
-│   └── HarmonyPatches.cs     # Harmony integration
-├── Utils/
-│   └── Constants.cs         # Mod constants and configuration
-└── Core.cs                  # Main mod entry point
-```
+Improve delivery speed and reduce crate carrying time.
 
-## 🐛 Troubleshooting
+* Ability to **purchase vehicles** for smuggling operations.
+* Crates can be **loaded into vehicles** instead of carried manually.
+* Larger vehicles may allow carrying **multiple crates** at once.
+* Vehicle tiers may match the criminal rank unlock progression.
 
-### Common Issues
+---
 
-**Notes app doesn't appear on phone:**
-- Ensure S1API is properly installed
-- Check that the mod DLL is in the correct Mods folder
-- Verify MelonLoader is running correctly
+## **Installation**
 
-**Notes not saving:**
-- Check that S1API's save system is working
-- Ensure you have write permissions to the game directory
-- Try creating a new note to test the save functionality
+1. Install **MelonLoader** (version 0.7.0 recommended).
+2. Place the mod `.dll` into
 
-**Starred notes not creating quests:**
-- Verify that the quest system is functioning
-- Check that S1API's QuestManager is properly initialized
-- Try starring and unstarring a note to refresh the quest
+   ```
+   /Mods
+   ```
 
-## 📄 License
+   inside your game directory.
+3. Launch the game
 
-This mod is released under the MIT License. See the LICENSE file for details.
+---
 
-**Made with ❤️ for the Schedule I community**
+## **Credits**
+
+**Mod Developer:** *FannsoNetti*
+**Dependencies:** MelonLoader + S1API
