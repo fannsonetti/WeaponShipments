@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using MelonLoader;
+using WeaponShipments.Apps;
 using Object = UnityEngine.Object;
 
 namespace WeaponShipments.Services
@@ -78,8 +79,8 @@ namespace WeaponShipments.Services
             if (mat.HasProperty("_ReceiveShadows"))
                 mat.SetFloat("_ReceiveShadows", 0.0f);
 
-            // Lime green with 50% alpha
-            Color baseColor = new Color(0.5f, 1f, 0f, 0.5f);
+            // Lime green with 5% alpha
+            Color baseColor = new Color(0.5f, 1f, 0f, 0.01f);
             if (mat.HasProperty("_BaseColor"))
                 mat.SetColor("_BaseColor", baseColor);
             else if (mat.HasProperty("_Color"))
@@ -125,15 +126,15 @@ namespace WeaponShipments.Services
 
             private void OnTriggerEnter(Collider other)
             {
-                if (other == null)
+                if (other == null || other.gameObject == null)
                     return;
 
-                // Prefer the top-level object representing the crate
-                var root = other.transform.root;
+                // get top-level crate object
+                Transform root = other.transform.root;
                 if (root == null)
                     root = other.transform;
 
-                // We only care about WeaponShipment crates
+                // we only care about WeaponShipment crates
                 if (root.name != "WeaponShipment" && other.gameObject.name != "WeaponShipment")
                     return;
 
@@ -143,11 +144,16 @@ namespace WeaponShipments.Services
 
                 ShipmentManager.Instance.DeliverShipment(_shipmentId);
 
-                // Remove the whole crate (root), not just the child collider
-                Object.Destroy(root.gameObject);  // remove crate
-                Object.Destroy(this.gameObject);  // remove area + cube
+                // 🔥 destroy the whole crate, not just the child collider
+                Object.Destroy(root.gameObject);
+                // remove area + cube
+                Object.Destroy(this.gameObject);
 
-                MelonLogger.Msg("[DeliveryArea] Shipment {0} delivered and visual removed.", _shipmentId);
+                MelonLogger.Msg("[DeliveryArea] Shipment {0} delivered and crate/area removed.", _shipmentId);
+
+                // if you have the WeaponShipmentApp.Instance refresh call, leave it here:
+                // var app = WeaponShipmentApp.Instance;
+                // if (app != null) app.OnExternalShipmentChanged(_shipmentId);
             }
         }
     }

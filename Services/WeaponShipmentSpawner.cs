@@ -6,32 +6,44 @@ namespace WeaponShipments.Services
 {
     public static class WeaponShipmentSpawner
     {
-        // Wherever you want the shipment to spawn
-        private static readonly Vector3 SpawnPosition = new Vector3(21.0741f, 0.9143f, -80.6995f);
-
         private static GameObject _templateCrate;
 
-        public static GameObject SpawnShipmentCrate()
+        // Where the shipment crate appears
+        private static readonly Vector3 TargetPosition = new Vector3(
+            21.0741f,
+            0.9143f,
+            -80.6995f
+        );
+
+        public static void SpawnShipmentCrate(ShipmentManager.ShipmentEntry shipment)
         {
+            if (shipment == null)
+            {
+                MelonLogger.Warning("[WeaponShipmentSpawner] Tried to spawn crate for null shipment.");
+                return;
+            }
+
             if (_templateCrate == null)
             {
                 _templateCrate = GameObject.Find("Wood Crate Prop");
                 if (_templateCrate == null)
                 {
                     MelonLogger.Error("[WeaponShipmentSpawner] Could not find 'Wood Crate Prop' in the scene.");
-                    return null;
+                    return;
                 }
             }
 
             var clone = Object.Instantiate(_templateCrate);
             clone.name = "WeaponShipment";
-            clone.transform.position = SpawnPosition;
+            clone.transform.position = TargetPosition;
 
-            // Rename child "Cube" to WeaponShipment as well
+            // Rename child "Cube" to WeaponShipment so the collider has the right name
             RenameChildCubeToWeaponShipment(clone.transform);
 
-            MelonLogger.Msg("[WeaponShipmentSpawner] Spawned WeaponShipment crate at {0}", SpawnPosition);
-            return clone;
+            // 🔹 Scale based on quantity
+            ApplyQuantityScale(clone.transform, shipment.Quantity);
+
+            MelonLogger.Msg("[WeaponShipmentSpawner] Spawned WeaponShipment crate (qty {0}) at {1}", shipment.Quantity, TargetPosition);
         }
 
         private static void RenameChildCubeToWeaponShipment(Transform root)
@@ -41,21 +53,40 @@ namespace WeaponShipments.Services
                 if (t.name == "Cube")
                 {
                     t.name = "WeaponShipment";
-                    MelonLogger.Msg("[WeaponShipmentSpawner] Renamed child Cube to WeaponShipment (path: {0})", t.GetHierarchyPath());
                 }
             }
         }
 
-        // Small helper to print nice hierarchy paths in logs
-        private static string GetHierarchyPath(this Transform t)
+        private static void ApplyQuantityScale(Transform root, int quantity)
         {
-            string path = t.name;
-            while (t.parent != null)
+            float scale;
+
+            switch (quantity)
             {
-                t = t.parent;
-                path = t.name + "/" + path;
+                case 1:
+                    scale = 0.6f;
+                    break;
+                case 2:
+                    scale = 0.9f;
+                    break;
+                case 3:
+                default:
+                    scale = 1.2f;
+                    break;
             }
-            return path;
+
+            // You can either scale the whole crate...
+            // root.localScale = new Vector3(scale, scale, scale);
+
+            // ...or prefer to scale just the visual child.
+            // This assumes the visual mesh is under the root somewhere.
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name == "WeaponShipment")
+                {
+                    t.localScale = new Vector3(scale, scale, scale);
+                }
+            }
         }
     }
 }

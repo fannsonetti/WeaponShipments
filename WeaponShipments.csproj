@@ -199,6 +199,7 @@
 	<ItemGroup>
 		<Compile Include="Core.cs" />
 		<Compile Include="Services\DeliveryAreaSpawner.cs" />
+		<Compile Include="Services\ShipmentPayouts.cs" />
 		<Compile Include="Services\WeaponShipmentSpawner.cs" />
 		<Compile Include="Utils\Constants.cs" />
 		<Compile Include="Apps\WeaponShipmentApp.cs" />
