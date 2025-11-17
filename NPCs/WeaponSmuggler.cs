@@ -14,7 +14,6 @@ using S1API.Properties;
 using S1API.Vehicles;
 using UnityEngine;
 using System.Linq;
-using Steamworks;
 
 namespace WeaponShipments.NPCs
 {
