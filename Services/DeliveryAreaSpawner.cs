@@ -255,9 +255,11 @@ namespace WeaponShipments.Services
 
                 MelonLogger.Msg("[DeliveryArea] Shipment {0} delivered and crate/area removed.", _shipmentId);
 
-                // if you have the WeaponShipmentApp.Instance refresh call, leave it here:
-                // var app = WeaponShipmentApp.Instance;
-                // if (app != null) app.OnExternalShipmentChanged(_shipmentId);
+                var app = WeaponShipments.Apps.WeaponShipmentApp.Instance;
+                if (app != null)
+                {
+                    app.OnExternalShipmentChanged(_shipmentId);
+                }
             }
         }
     }

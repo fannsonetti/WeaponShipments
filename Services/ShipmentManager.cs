@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using MelonLoader;
-using UnityEngine; // Random + WaitForSeconds
+using UnityEngine;
 
 namespace WeaponShipments.Services
 {
     /// <summary>
-    /// Manages randomly generated weapon shipments.
-    /// - Max 3 shipments in the list at a time (including Completed until removed).
-    /// - Adds one new shipment every 5 minutes when there is space.
-    /// - Only 1 shipment can be "In Progress" at a time.
-    /// - Completed shipments stay in the list until the app "Finishes" them.
+    /// Manages 7 permanent weapon shipment slots with per-weapon cooldowns.
     /// </summary>
     public class ShipmentManager
     {
@@ -22,37 +17,16 @@ namespace WeaponShipments.Services
             public string Origin;
             public string Destination;
             public string ProductForm;
-            public string Status;   // Pending / In Progress / Completed
+            public string Status;   // Pending / In Progress / Completed / Cooldown
             public bool Delivered;
             public DateTime Updated;
-
-            // 🔹 NEW: how many items in this shipment (1–3)
-            public int Quantity;
+            public int Quantity;    // 1–3
         }
 
-        private const int MaxActiveShipments = 3;
-        private const float OfferIntervalSeconds = 5f * 60f; // 5 minutes
+        // 5-minute cooldown per weapon after finishing
+        private const float PerGunCooldownSeconds = 5f * 60f;
 
-        private static ShipmentManager _instance;
-        public static ShipmentManager Instance
-        {
-            get
-            {
-                if (_instance == null)
-                    _instance = new ShipmentManager();
-                return _instance;
-            }
-        }
-
-        private readonly List<ShipmentEntry> _shipments = new List<ShipmentEntry>();
-
-        private bool _offerRoutineStarted;
-        private bool _initialised;
-
-        // For UI timer
-        private DateTime? _nextOfferTimeUtc;
-
-        // Weapon types
+        // Weapon list (one slot per weapon)
         private static readonly string[] GunTypes =
         {
             "Baseball Bat",
@@ -90,13 +64,43 @@ namespace WeaponShipments.Services
             "Van"
         };
 
+        // -----------------------------
+        //   SINGLETON
+        // -----------------------------
+
+        private static ShipmentManager _instance;
+        public static ShipmentManager Instance
+        {
+            get
+            {
+                if (_instance == null)
+                    _instance = new ShipmentManager();
+                return _instance;
+            }
+        }
+
+        // -----------------------------
+        //   INTERNAL STATE
+        // -----------------------------
+
+        private readonly List<ShipmentEntry> _shipments = new List<ShipmentEntry>();
+
+        // When each gun type is allowed again
+        private readonly Dictionary<string, DateTime> _gunCooldownUntil =
+            new Dictionary<string, DateTime>();
+
+        private bool _initialised = false;
+
+        // -----------------------------
+        //   PUBLIC API
+        // -----------------------------
+
         /// <summary>
-        /// Returns the active list of shipments (Pending / In Progress / Completed).
-        /// Completed ones remain here until removed by the app.
+        /// Returns all 7 permanent slots.
         /// </summary>
         public IReadOnlyList<ShipmentEntry> GetAllShipments()
         {
-            EnsureInitialOffers();
+            EnsureInitialSlots();
             return _shipments;
         }
 
@@ -109,8 +113,8 @@ namespace WeaponShipments.Services
         }
 
         /// <summary>
-        /// True if a shipment is "In Progress" and not yet delivered.
-        /// (You only allow 1 active at a time.)
+        /// True if there is a shipment "In Progress" and not yet delivered.
+        /// Only 1 allowed at a time.
         /// </summary>
         public bool HasActiveInProgressShipment()
         {
@@ -124,42 +128,40 @@ namespace WeaponShipments.Services
         }
 
         /// <summary>
-        /// Accepts a shipment if no other "In Progress" shipment exists.
-        /// Sets status to "In Progress".
+        /// Accepts a shipment if no other "In Progress" exists and it is not on cooldown.
         /// </summary>
         public bool AcceptShipment(string id)
         {
-            if (HasActiveInProgressShipment())
-            {
-                MelonLogger.Warning("[ShipmentManager] Cannot accept: another shipment is already In Progress.");
-                return false;
-            }
-
             var shipment = GetShipment(id);
             if (shipment == null)
+                return false;
+
+            // Only one active job
+            if (HasActiveInProgressShipment())
+                return false;
+
+            // On cooldown?
+            if (_gunCooldownUntil.TryGetValue(shipment.GunType, out var until) &&
+                until > DateTime.UtcNow)
             {
-                MelonLogger.Warning("[ShipmentManager] AcceptShipment: shipment not found: " + id);
                 return false;
             }
 
-            if (shipment.Delivered)
-            {
-                MelonLogger.Warning("[ShipmentManager] AcceptShipment: shipment already delivered: " + id);
-                return false;
-            }
+            // Cooldown expired but status not updated yet
+            if (shipment.Status == "Cooldown")
+                shipment.Status = "Pending";
 
             shipment.Status = "In Progress";
             shipment.Delivered = false;
             shipment.Updated = DateTime.Now;
 
-            MelonLogger.Msg($"[ShipmentManager] Accepted shipment {id} (In Progress)");
+            MelonLogger.Msg($"[ShipmentManager] Accepted: {shipment.GunType}");
+
             return true;
         }
 
         /// <summary>
-        /// Called by the delivery area when the crate enters.
-        /// Marks it delivered and sets Status = "Completed".
-        /// Does NOT remove it from the list.
+        /// Called when crate enters delivery zone: marks as Completed.
         /// </summary>
         public void DeliverShipment(string id)
         {
@@ -171,12 +173,12 @@ namespace WeaponShipments.Services
             shipment.Status = "Completed";
             shipment.Updated = DateTime.Now;
 
-            MelonLogger.Msg($"[ShipmentManager] Delivered shipment {id} (Completed)");
+            MelonLogger.Msg($"[ShipmentManager] Delivered: {shipment.GunType}");
         }
 
         /// <summary>
-        /// Called when the player presses the "Finish" button in the app.
-        /// Removes the shipment from the list.
+        /// Called when the player presses "Finish" in the phone app.
+        /// Starts cooldown instead of removing the row.
         /// </summary>
         public void RemoveShipment(string id)
         {
@@ -184,119 +186,103 @@ namespace WeaponShipments.Services
             if (shipment == null)
                 return;
 
-            _shipments.Remove(shipment);
-            MelonLogger.Msg($"[ShipmentManager] Removed shipment {id} from list.");
+            // Start cooldown for this weapon type
+            _gunCooldownUntil[shipment.GunType] =
+                DateTime.UtcNow.AddSeconds(PerGunCooldownSeconds);
+
+            // Put slot into cooldown state
+            shipment.Status = "Cooldown";
+            shipment.Delivered = false;
+            shipment.Updated = DateTime.Now;
+
+            // Pre-roll the next route for after cooldown
+            shipment.Origin = Origins[UnityEngine.Random.Range(0, Origins.Length)];
+            shipment.Destination = Destinations[UnityEngine.Random.Range(0, Destinations.Length)];
+            shipment.ProductForm = ProductForms[UnityEngine.Random.Range(0, ProductForms.Length)];
+            shipment.Quantity = UnityEngine.Random.Range(1, 4);
+
+            MelonLogger.Msg($"[ShipmentManager] {shipment.GunType} enters cooldown.");
         }
 
         /// <summary>
-        /// Clears all shipments and resets initialization.
+        /// For UI: returns remaining cooldown for a shipment's weapon type, if any.
+        /// If cooldown finishes, status is reset to Pending.
         /// </summary>
-        public void ClearAll()
+        public bool TryGetCooldownRemaining(string shipmentId, out TimeSpan remaining)
         {
-            _shipments.Clear();
-            _initialised = false;
-            _nextOfferTimeUtc = null;
+            remaining = TimeSpan.Zero;
+
+            var shipment = GetShipment(shipmentId);
+            if (shipment == null)
+                return false;
+
+            if (!_gunCooldownUntil.TryGetValue(shipment.GunType, out var until))
+                return false;
+
+            var now = DateTime.UtcNow;
+
+            // Cooldown done? reset
+            if (until <= now)
+            {
+                _gunCooldownUntil.Remove(shipment.GunType);
+
+                if (shipment.Status == "Cooldown")
+                {
+                    shipment.Status = "Pending";
+                    shipment.Updated = DateTime.Now;
+                }
+
+                return false;
+            }
+
+            remaining = until - now;
+            return true;
         }
 
-        /// <summary>
-        /// Ensures the starting list has up to MaxActiveShipments (3) offers.
-        /// </summary>
-        public void EnsureInitialOffers()
+        // -----------------------------
+        //   INITIAL SLOTS
+        // -----------------------------
+
+        private void EnsureInitialSlots()
         {
             if (_initialised)
                 return;
 
-            while (_shipments.Count < MaxActiveShipments)
+            _shipments.Clear();
+
+            // Exactly one slot per weapon
+            for (int i = 0; i < GunTypes.Length; i++)
             {
-                _shipments.Add(GenerateRandomShipment());
+                ShipmentEntry entry = new ShipmentEntry
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    GunType = GunTypes[i],
+                    Origin = Origins[UnityEngine.Random.Range(0, Origins.Length)],
+                    Destination = Destinations[UnityEngine.Random.Range(0, Destinations.Length)],
+                    ProductForm = ProductForms[UnityEngine.Random.Range(0, ProductForms.Length)],
+                    Status = "Pending",
+                    Delivered = false,
+                    Updated = DateTime.Now,
+                    Quantity = UnityEngine.Random.Range(1, 4)
+                };
+
+                _shipments.Add(entry);
             }
 
             _initialised = true;
+            MelonLogger.Msg("[ShipmentManager] Initialized 7 permanent shipment slots.");
         }
 
         /// <summary>
-        /// Starts the 5-minute offer loop (only once).
+        /// Debug: Clears all shipments and cooldowns so it can re-init.
         /// </summary>
-        public void StartOfferRoutine()
+        public void ClearAll()
         {
-            if (_offerRoutineStarted)
-                return;
+            _shipments.Clear();
+            _gunCooldownUntil.Clear();
+            _initialised = false;
 
-            _offerRoutineStarted = true;
-            MelonCoroutines.Start(OfferRoutine());
-        }
-
-        private IEnumerator OfferRoutine()
-        {
-            while (true)
-            {
-                // If full, just wait, no next-offer ETA
-                if (_shipments.Count >= MaxActiveShipments)
-                {
-                    _nextOfferTimeUtc = null;
-                    yield return new WaitForSeconds(OfferIntervalSeconds);
-                    continue;
-                }
-
-                // We have room; schedule next offer
-                _nextOfferTimeUtc = DateTime.UtcNow.AddSeconds(OfferIntervalSeconds);
-                yield return new WaitForSeconds(OfferIntervalSeconds);
-
-                // Only spawn if we still have room
-                if (_shipments.Count < MaxActiveShipments)
-                {
-                    var newOffer = GenerateRandomShipment();
-                    _shipments.Add(newOffer);
-                    MelonLogger.Msg($"[ShipmentManager] New timed offer: {newOffer.GunType} ({newOffer.ProductForm})");
-                }
-            }
-        }
-
-        /// <summary>
-        /// For the UI timer.
-        /// Returns true if we have something to show.
-        /// If offersFull == true, remaining is ignored.
-        /// </summary>
-        public bool TryGetTimeToNextOffer(out TimeSpan remaining, out bool offersFull)
-        {
-            if (_shipments.Count >= MaxActiveShipments)
-            {
-                offersFull = true;
-                remaining = TimeSpan.Zero;
-                return true;
-            }
-
-            offersFull = false;
-
-            if (!_nextOfferTimeUtc.HasValue)
-            {
-                remaining = TimeSpan.Zero;
-                return false;
-            }
-
-            remaining = _nextOfferTimeUtc.Value - DateTime.UtcNow;
-            return true;
-        }
-
-        /// <summary>
-        /// Uses UnityEngine.Random so each startup produces different results.
-        /// </summary>
-        private ShipmentEntry GenerateRandomShipment()
-        {
-            var s = new ShipmentEntry
-            {
-                Id = Guid.NewGuid().ToString("N"),
-                GunType = GunTypes[UnityEngine.Random.Range(0, GunTypes.Length)],
-                Origin = Origins[UnityEngine.Random.Range(0, Origins.Length)],
-                Destination = Destinations[UnityEngine.Random.Range(0, Destinations.Length)],
-                ProductForm = ProductForms[UnityEngine.Random.Range(0, ProductForms.Length)],
-                Status = "Pending",
-                Delivered = false,
-                Updated = DateTime.Now,
-                Quantity = UnityEngine.Random.Range(1, 4)   // 🔹 1, 2, or 3
-            };
-
-            return s;
+            MelonLogger.Msg("[ShipmentManager] All shipments cleared.");
         }
     }
 }

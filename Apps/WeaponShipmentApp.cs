@@ -19,9 +19,10 @@ namespace WeaponShipments.Apps
     /// <summary>
     /// Weapon shipment contracts app.
     /// Status flow:
-    ///   Pending     (white)    – button: "Accept Deal" (green)
-    ///   In Progress (orange)   – no button
-    ///   Completed   (green)    – button: "Finish" (blue) removes shipment
+    ///   Pending     – button: "Accept Deal"
+    ///   In Progress – no button
+    ///   Completed   – button: "Finish" (starts cooldown)
+    ///   Cooldown    – no button, row greyed out with timer
     /// </summary>
     public class WeaponShipmentApp : PhoneApp
     {
@@ -34,16 +35,15 @@ namespace WeaponShipments.Apps
         private Text _productFormValue;
         private Text _originValue;
         private Text _destinationValue;
-        private Text _statusValue;
-        private Text _timerText;
+        internal Text _statusValue; // accessed by nested class
 
-        private Button _actionButton; // reused Accept / Finish
-
-        private string _selectedShipmentId = string.Empty;
+        internal Button _actionButton; // reused Accept / Finish
+        internal string _selectedShipmentId = string.Empty;
 
         private static readonly Color StatusColorPending = Color.white;
         private static readonly Color StatusColorInProgress = new Color(1f, 0.64f, 0.1f, 1f); // orange
         private static readonly Color StatusColorCompleted = new Color(0.3f, 1f, 0.3f, 1f);   // green
+        private static readonly Color StatusColorCooldown = new Color(0.7f, 0.7f, 0.7f, 1f);  // grey
 
         private static readonly Color ActionColorAccept = new Color(0.2f, 0.7f, 0.3f, 1f); // green
         private static readonly Color ActionColorFinish = new Color(0.2f, 0.4f, 1f, 1f);   // blue
@@ -56,10 +56,6 @@ namespace WeaponShipments.Apps
         protected override void OnCreated()
         {
             Instance = this;
-
-            var iconSprite = LoadEmbeddedShipmentIcon();
-            if (iconSprite != null)
-                SetIconSprite(iconSprite);
         }
 
         protected override void OnDestroyed()
@@ -67,7 +63,6 @@ namespace WeaponShipments.Apps
             if (Instance == this)
                 Instance = null;
         }
-
 
         public void OnExternalShipmentChanged(string shipmentId)
         {
@@ -78,7 +73,7 @@ namespace WeaponShipments.Apps
                 var shipment = ShipmentManager.Instance.GetShipment(shipmentId);
                 if (shipment != null)
                 {
-                    _statusValue.text = shipment.Status;
+                    _statusValue.text = GetStatusDisplayText(shipment);
                     UpdateStatusColor(shipment.Status);
                     UpdateActionButtonForStatus(shipment.Status);
                 }
@@ -87,8 +82,15 @@ namespace WeaponShipments.Apps
 
         protected override void OnCreatedUI(GameObject container)
         {
+            // Set phone icon here (UI exists now)
+            var iconSprite = LoadEmbeddedShipmentIcon();
+            if (iconSprite != null)
+                SetIconSprite(iconSprite);
+
             // Background + top bar
             var bg = UIFactory.Panel("MainBG", container.transform, Color.black, fullAnchor: true);
+            bg.gameObject.AddComponent<AutoRefreshUI>(); // auto-refresh every second while open
+
             UIFactory.TopBar("TopBar", bg.transform, "Weapon Shipments", 0.82f, 75, 75, 0, 35);
 
             // Left list panel
@@ -121,24 +123,6 @@ namespace WeaponShipments.Apps
 
             _detailsPanel = CreateDetailsPanel(rightPanel.transform);
             _detailsPanel.SetActive(false);
-
-            // Timer text bottom-left on bg
-            _timerText = UIFactory.Text(
-                "OfferTimerText",
-                string.Empty,
-                bg.transform,
-                14, TextAnchor.LowerLeft
-            );
-            var timerRT = _timerText.GetComponent<RectTransform>();
-            timerRT.anchorMin = new Vector2(0f, 0f);
-            timerRT.anchorMax = new Vector2(0f, 0f);
-            timerRT.pivot = new Vector2(0f, 0f);
-            timerRT.anchoredPosition = new Vector2(10f, 10f);
-
-            var updaterGO = new GameObject("OfferTimerUpdater");
-            updaterGO.transform.SetParent(bg.transform, false);
-            var updater = updaterGO.AddComponent<OfferTimerUI>();
-            updater.Init(_timerText);
 
             RefreshList();
         }
@@ -202,7 +186,7 @@ namespace WeaponShipments.Apps
             valueText = UIFactory.Text(label + "Value", "-", row.transform, 16, TextAnchor.MiddleLeft);
         }
 
-        private void RefreshList()
+        internal void RefreshList()
         {
             if (_listContent == null)
                 return;
@@ -215,25 +199,52 @@ namespace WeaponShipments.Apps
             {
                 var shipment = shipments[i];
 
-                var row = UIFactory.CreateQuestRow($"Shipment_{shipment.Id}", _listContent, out var iconPanel, out var textPanel);
+                var row = UIFactory.CreateQuestRow(
+                    $"Shipment_{shipment.Id}",
+                    _listContent,
+                    out var iconPanel,
+                    out var textPanel
+                );
 
                 bool inProgress = shipment.Status == "In Progress";
                 bool completed = shipment.Status == "Completed";
+                bool cooldown = shipment.Status == "Cooldown";
 
-                // Tint completed rows green
+                // Tint row background by status (NOT the icon)
                 var rowImage = row.GetComponent<Image>();
                 if (rowImage != null)
                 {
-                    if (completed)
-                        rowImage.color = new Color(0.08f, 0.2f, 0.08f, 0.9f);  // dark green tint
+                    if (inProgress)
+                        rowImage.color = new Color(0.3f, 0.15f, 0f, 0.9f);          // orange-ish
+                    else if (completed)
+                        rowImage.color = new Color(0f, 0.35f, 0f, 0.9f);            // green-ish
+                    else if (cooldown)
+                        rowImage.color = new Color(0.15f, 0.15f, 0.15f, 0.9f);      // greyed out
                     else
-                        rowImage.color = new Color(0.08f, 0.08f, 0.08f, 0.9f);
+                        rowImage.color = new Color(0.08f, 0.08f, 0.08f, 0.9f);      // pending
                 }
 
-                CreateShipmentIcon(iconPanel.transform, shipment.GunType, inProgress, completed);
+                // Per-row cooldown timer in top-right
+                var cooldownTimer = UIFactory.Text(
+                    $"CooldownTimer_{shipment.Id}",
+                    string.Empty,
+                    row.transform,
+                    12,
+                    TextAnchor.UpperRight
+                );
+                var timerRT = cooldownTimer.GetComponent<RectTransform>();
+                timerRT.anchorMin = new Vector2(1f, 1f);
+                timerRT.anchorMax = new Vector2(1f, 1f);
+                timerRT.pivot = new Vector2(1f, 1f);
+                timerRT.anchoredPosition = new Vector2(-10f, -8f);
+
+                var cooldownUI = row.AddComponent<RowCooldownUI>();
+                cooldownUI.Init(shipment.Id, cooldownTimer);
+
+                CreateShipmentIcon(iconPanel.transform, shipment.GunType);
 
                 string title = $"{shipment.GunType} x{shipment.Quantity} ({shipment.ProductForm})";
-                string subtitle = $"{shipment.Origin} → {shipment.Destination} • {shipment.Status}";
+                string subtitle = $"{shipment.Origin} → {shipment.Destination} • {GetStatusDisplayText(shipment)}";
 
                 UIFactory.CreateTextBlock(textPanel.transform, title, subtitle, false);
 
@@ -255,7 +266,7 @@ namespace WeaponShipments.Apps
             _productFormValue.text = shipment.ProductForm;
             _originValue.text = shipment.Origin;
             _destinationValue.text = shipment.Destination;
-            _statusValue.text = shipment.Status;
+            _statusValue.text = GetStatusDisplayText(shipment);
 
             UpdateStatusColor(shipment.Status);
             UpdateActionButtonForStatus(shipment.Status);
@@ -280,13 +291,16 @@ namespace WeaponShipments.Apps
                 case "Completed":
                     _statusValue.color = StatusColorCompleted;
                     break;
+                case "Cooldown":
+                    _statusValue.color = StatusColorCooldown;
+                    break;
                 default:
                     _statusValue.color = StatusColorPending;
                     break;
             }
         }
 
-        private void UpdateActionButtonForStatus(string status)
+        internal void UpdateActionButtonForStatus(string status)
         {
             if (_actionButton == null)
                 return;
@@ -304,6 +318,10 @@ namespace WeaponShipments.Apps
                     _actionButton.gameObject.SetActive(true);
                     if (text != null) text.text = "Finish";
                     if (img != null) img.color = ActionColorFinish;
+                    break;
+
+                case "Cooldown":
+                    _actionButton.gameObject.SetActive(false);
                     break;
 
                 default: // Pending
@@ -349,7 +367,7 @@ namespace WeaponShipments.Apps
             bool accepted = ShipmentManager.Instance.AcceptShipment(shipment.Id);
             if (!accepted)
             {
-                MelonLogger.Warning("[WeaponShipmentApp] Cannot accept: another deal is already In Progress.");
+                MelonLogger.Warning("[WeaponShipmentApp] Cannot accept: another deal is already In Progress or slot is on cooldown.");
                 return;
             }
 
@@ -361,7 +379,7 @@ namespace WeaponShipments.Apps
             shipment = ShipmentManager.Instance.GetShipment(shipment.Id);
             if (shipment != null)
             {
-                _statusValue.text = shipment.Status;
+                _statusValue.text = GetStatusDisplayText(shipment);
                 UpdateStatusColor(shipment.Status);
                 UpdateActionButtonForStatus(shipment.Status);
             }
@@ -371,21 +389,18 @@ namespace WeaponShipments.Apps
 
         private void HandleFinishShipment(ShipmentManager.ShipmentEntry shipment)
         {
-            // 1) Compute reward: base value * quantity
             float baseReward = ShipmentPayouts.GetReward(shipment.GunType);
             float totalReward = baseReward * Mathf.Max(1, shipment.Quantity);
 
-            // 2) Pay instantly (visual + sound)
             if (totalReward > 0f)
             {
                 Money.ChangeCashBalance(totalReward, visualizeChange: true, playCashSound: true);
                 MelonLogger.Msg("[WeaponShipmentApp] Paid ${0} for {1} x{2}", totalReward, shipment.GunType, shipment.Quantity);
             }
 
-            // 3) Remove shipment from list
+            // Start cooldown instead of removing row
             ShipmentManager.Instance.RemoveShipment(shipment.Id);
 
-            // 4) Clear selection + refresh UI (no save here)
             _selectedShipmentId = string.Empty;
             _detailsPanel.SetActive(false);
 
@@ -396,19 +411,42 @@ namespace WeaponShipments.Apps
             RefreshList();
         }
 
+        // ---------------- STATUS DISPLAY (INCLUDES COOLDOWN TIMER) ----------------
+
+        internal string GetStatusDisplayText(ShipmentManager.ShipmentEntry shipment)
+        {
+            if (shipment == null)
+                return "-";
+
+            if (shipment.Status == "Cooldown")
+            {
+                TimeSpan remaining;
+                if (ShipmentManager.Instance.TryGetCooldownRemaining(shipment.Id, out remaining) &&
+                    remaining.TotalSeconds > 0)
+                {
+                    if (remaining.TotalSeconds < 0)
+                        remaining = TimeSpan.Zero;
+
+                    return remaining.ToString(@"mm\:ss");
+                }
+
+                return "Pending";
+            }
+
+            return shipment.Status;
+        }
 
         // ---------------- ICONS ----------------
 
         private Sprite LoadEmbeddedShipmentIcon()
         {
-            // fallback generic icon if per-gun icon is missing
             try
             {
                 var assembly = Assembly.GetExecutingAssembly();
                 string[] candidates =
                 {
-                    "WeaponShipments.Recources.shipments.png",
                     "WeaponShipments.Resources.shipments.png",
+                    "Resources.shipments.png",
                     "shipments.png"
                 };
 
@@ -442,8 +480,6 @@ namespace WeaponShipments.Apps
                 if (_resourceNames == null)
                     _resourceNames = assembly.GetManifestResourceNames();
 
-                // Simplify gun type for matching
-                // e.g. "AK-47" -> "ak47", "Baseball Bat" -> "baseballbat"
                 string key = gunType
                     .Replace(" ", "")
                     .Replace("-", "")
@@ -453,11 +489,9 @@ namespace WeaponShipments.Apps
                 {
                     string lower = resName.ToLowerInvariant();
 
-                    // Only consider things that look like icon images
                     if (!lower.Contains("__icon") || !lower.EndsWith(".png"))
                         continue;
 
-                    // Simplify for match (remove dots/underscores too)
                     string simple = lower
                         .Replace(".", "")
                         .Replace("_", "")
@@ -483,8 +517,7 @@ namespace WeaponShipments.Apps
             return null;
         }
 
-
-        private void CreateShipmentIcon(Transform parent, string gunType, bool inProgress, bool completed)
+        private void CreateShipmentIcon(Transform parent, string gunType)
         {
             var iconGO = new GameObject("ShipmentIcon");
             iconGO.transform.SetParent(parent, false);
@@ -501,12 +534,7 @@ namespace WeaponShipments.Apps
             if (iconSprite != null)
             {
                 iconImage.sprite = iconSprite;
-                if (completed)
-                    iconImage.color = StatusColorCompleted;
-                else if (inProgress)
-                    iconImage.color = StatusColorInProgress;
-                else
-                    iconImage.color = Color.white;
+                iconImage.color = Color.white; // never tinted by status
             }
             else
             {
@@ -518,50 +546,75 @@ namespace WeaponShipments.Apps
                 textRT.offsetMin = Vector2.zero;
                 textRT.offsetMax = Vector2.zero;
 
-                if (completed)
-                    iconText.color = StatusColorCompleted;
-                else if (inProgress)
-                    iconText.color = StatusColorInProgress;
-                else
-                    iconText.color = new Color(0.8f, 0.8f, 0.8f, 1f);
+                iconText.color = new Color(0.8f, 0.8f, 0.8f, 1f);
             }
         }
 
-        // ---------------- TIMER MONOBEH ----------------
+        // ---------------- PER-ROW COOLDOWN UI ----------------
 
-        private class OfferTimerUI : MonoBehaviour
+        private class RowCooldownUI : MonoBehaviour
         {
-            private Text _text;
+            private Text _timerText;
+            private string _shipmentId;
 
-            public void Init(Text text)
+            public void Init(string shipmentId, Text timerText)
             {
-                _text = text;
+                _shipmentId = shipmentId;
+                _timerText = timerText;
             }
 
             private void Update()
             {
-                if (_text == null)
+                if (_timerText == null || string.IsNullOrEmpty(_shipmentId))
                     return;
 
                 TimeSpan remaining;
-                bool offersFull;
-                if (ShipmentManager.Instance.TryGetTimeToNextOffer(out remaining, out offersFull))
-                {
-                    if (offersFull)
-                    {
-                        _text.text = "Offers full (3/3)";
-                    }
-                    else
-                    {
-                        if (remaining.TotalSeconds < 0)
-                            remaining = TimeSpan.Zero;
+                bool onCooldown = ShipmentManager.Instance.TryGetCooldownRemaining(_shipmentId, out remaining);
 
-                        _text.text = "Next offer in " + remaining.ToString(@"mm\:ss");
-                    }
+                if (onCooldown && remaining.TotalSeconds > 0)
+                {
+                    if (remaining.TotalSeconds < 0)
+                        remaining = TimeSpan.Zero;
+
+                    _timerText.gameObject.SetActive(true);
+                    _timerText.text = remaining.ToString(@"mm\:ss");
                 }
                 else
                 {
-                    _text.text = string.Empty;
+                    _timerText.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        // ---------------- AUTO-REFRESH WHILE APP OPEN ----------------
+
+        private class AutoRefreshUI : MonoBehaviour
+        {
+            private float _timer = 0f;
+
+            private void Update()
+            {
+                if (WeaponShipmentApp.Instance == null)
+                    return;
+
+                _timer += Time.deltaTime;
+                if (_timer < 1f)
+                    return;
+
+                _timer = 0f;
+
+                var app = WeaponShipmentApp.Instance;
+                app.RefreshList();
+
+                if (!string.IsNullOrEmpty(app._selectedShipmentId))
+                {
+                    var s = ShipmentManager.Instance.GetShipment(app._selectedShipmentId);
+                    if (s != null)
+                    {
+                        app._statusValue.text = app.GetStatusDisplayText(s);
+                        app.UpdateStatusColor(s.Status);
+                        app.UpdateActionButtonForStatus(s.Status);
+                    }
                 }
             }
         }

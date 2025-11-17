@@ -60,8 +60,8 @@ namespace WeaponShipments.Services
                 {
                     "Black Market",
                     new SpawnPoint(
-                        new Vector3(-54f, -0.5f, 34.8f),
-                        Quaternion.Euler(0f, 270f, 0f)
+                        new Vector3(-61.1777f, -1.54f, 32.429f),
+                        Quaternion.Euler(0f, 0f, 0f)
                     )
                 },
             };

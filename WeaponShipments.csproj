@@ -198,6 +198,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="Core.cs" />
+		<Compile Include="NPCs\WeaponSmuggler.cs" />
 		<Compile Include="Services\DeliveryAreaSpawner.cs" />
 		<Compile Include="Services\ShipmentPayouts.cs" />
 		<Compile Include="Services\WeaponShipmentSpawner.cs" />
@@ -206,7 +207,7 @@
 		<Compile Include="Services\ShipmentManager.cs" />
 	</ItemGroup>
 	<ItemGroup>
-		<EmbeddedResource Include="Recources\*.png" />
+		<EmbeddedResource Include="Resources\*.png" />
 	</ItemGroup>
 	<!-- S1API.Forked Reference: NuGet Package (default) -->
 	<ItemGroup Condition="'$(UseLocalS1API)' != 'true'">
@@ -221,7 +222,7 @@
 		</Reference>
 	</ItemGroup>
 	<ItemGroup>
-	  <Folder Include="Recources\" />
+	  <Folder Include="Resources\" />
 	</ItemGroup>
 
 	<PropertyGroup>
