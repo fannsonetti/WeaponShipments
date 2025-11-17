@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using MelonLoader;
 using Object = UnityEngine.Object;
 
@@ -8,12 +9,78 @@ namespace WeaponShipments.Services
     {
         private static GameObject _templateCrate;
 
-        // Where the shipment crate appears
-        private static readonly Vector3 TargetPosition = new Vector3(
-            21.0741f,
-            0.9143f,
-            -80.6995f
+        // Old fixed spot now used as a fallback
+        private static readonly Vector3 FallbackSpawnPosition = new Vector3(
+            0f,
+            0f,
+            0f
         );
+
+        private static readonly Quaternion FallbackSpawnRotation = Quaternion.identity;
+
+        // Data for a spawn point
+        private struct SpawnPoint
+        {
+            public Vector3 Position;
+            public Quaternion Rotation;
+
+            public SpawnPoint(Vector3 position, Quaternion rotation)
+            {
+                Position = position;
+                Rotation = rotation;
+            }
+        }
+
+        // Map shipment.Origin -> crate spawn position + rotation
+        // TODO: Replace these with your actual scene coordinates/orientations.
+        private static readonly Dictionary<string, SpawnPoint> OriginSpawnPoints =
+            new Dictionary<string, SpawnPoint>
+            {
+                {
+                    "RV",
+                    new SpawnPoint(
+                        new Vector3(17f, 1.5f, -79f),
+                        Quaternion.Euler(0f, 180f, 0f)
+                    )
+                },
+                {
+                    "Gazebo",
+                    new SpawnPoint(
+                        new Vector3(83f, 6f, -125f),
+                        Quaternion.Euler(0f, 90f, 0f)
+                    )
+                },
+                {
+                    "Sewer Market",
+                    new SpawnPoint(
+                        new Vector3(72.75f, -4.5f, 34.65f),
+                        Quaternion.Euler(0f, 65f, 0f)
+                    )
+                },
+                {
+                    "Black Market",
+                    new SpawnPoint(
+                        new Vector3(-54f, -0.5f, 34.8f),
+                        Quaternion.Euler(0f, 270f, 0f)
+                    )
+                },
+            };
+
+        private static SpawnPoint GetSpawnPointForOrigin(string origin)
+        {
+            if (!string.IsNullOrEmpty(origin) &&
+                OriginSpawnPoints.TryGetValue(origin, out var spawn))
+            {
+                return spawn;
+            }
+
+            MelonLogger.Warning(
+                "[WeaponShipmentSpawner] No spawn mapped for origin '{0}', using fallback.",
+                string.IsNullOrEmpty(origin) ? "<null/empty>" : origin
+            );
+
+            return new SpawnPoint(FallbackSpawnPosition, FallbackSpawnRotation);
+        }
 
         public static void SpawnShipmentCrate(ShipmentManager.ShipmentEntry shipment)
         {
@@ -35,15 +102,25 @@ namespace WeaponShipments.Services
 
             var clone = Object.Instantiate(_templateCrate);
             clone.name = "WeaponShipment";
-            clone.transform.position = TargetPosition;
+
+            // Decide spawn point based on shipment origin
+            var spawn = GetSpawnPointForOrigin(shipment.Origin);
+            clone.transform.position = spawn.Position;
+            clone.transform.rotation = spawn.Rotation;
 
             // Rename child "Cube" to WeaponShipment so the collider has the right name
             RenameChildCubeToWeaponShipment(clone.transform);
 
-            // 🔹 Scale based on quantity
+            // Scale based on quantity (1–3)
             ApplyQuantityScale(clone.transform, shipment.Quantity);
 
-            MelonLogger.Msg("[WeaponShipmentSpawner] Spawned WeaponShipment crate (qty {0}) at {1}", shipment.Quantity, TargetPosition);
+            MelonLogger.Msg(
+                "[WeaponShipmentSpawner] Spawned WeaponShipment crate (qty {0}) at {1} (origin: {2}, rot: {3})",
+                shipment.Quantity,
+                spawn.Position,
+                shipment.Origin,
+                spawn.Rotation.eulerAngles
+            );
         }
 
         private static void RenameChildCubeToWeaponShipment(Transform root)
@@ -75,18 +152,8 @@ namespace WeaponShipments.Services
                     break;
             }
 
-            // You can either scale the whole crate...
-            // root.localScale = new Vector3(scale, scale, scale);
-
-            // ...or prefer to scale just the visual child.
-            // This assumes the visual mesh is under the root somewhere.
-            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
-            {
-                if (t.name == "WeaponShipment")
-                {
-                    t.localScale = new Vector3(scale, scale, scale);
-                }
-            }
+            // Apply uniform scaling to the crate root
+            root.localScale = new Vector3(scale, scale, scale);
         }
     }
 }

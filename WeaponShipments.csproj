@@ -204,7 +204,6 @@
 		<Compile Include="Utils\Constants.cs" />
 		<Compile Include="Apps\WeaponShipmentApp.cs" />
 		<Compile Include="Services\ShipmentManager.cs" />
-		<Compile Include="Quests\StarredNoteQuest.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Recources\*.png" />
