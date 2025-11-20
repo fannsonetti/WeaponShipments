@@ -1,19 +1,20 @@
 ﻿using MelonLoader;
-using S1API.Entities;
-using S1API.Entities.Schedule;
-using S1API.Map;
-using S1API.Map.ParkingLots;
-using S1API.Money;
 using S1API.Economy;
+using S1API.Entities;
 using S1API.Entities.NPCs.Westville;
+using S1API.Entities.Schedule;
 using S1API.GameTime;
 using S1API.Growing;
+using S1API.Leveling;
+using S1API.Map;
 using S1API.Map.Buildings;
+using S1API.Map.ParkingLots;
+using S1API.Money;
 using S1API.Products;
 using S1API.Properties;
 using S1API.Vehicles;
-using UnityEngine;
 using System.Linq;
+using UnityEngine;
 
 namespace WeaponShipments.NPCs
 {
@@ -46,13 +47,13 @@ namespace WeaponShipments.NPCs
                     av.LeftEye = (0.31f, 0.35f);
                     av.RightEye = (0.31f, 0.35f);
                     av.HairColor = new Color(0.075f, 0.075f, 0.075f);
-                    av.HairPath = "Avatar/Hair/Closebuzzcut/CloseBuzzCut";
-                    av.WithFaceLayer("Avatar/Layers/Face/Face_Agitated", Color.black);
-                    av.WithFaceLayer("Avatar/Layers/Face/FacialHair_Goatee", Color.black);
-                    av.WithFaceLayer("Avatar/Layers/Tattoos/Face/Face_Sword", Color.black);
-                    av.WithBodyLayer("Avatar/Layers/Top/HazmatSuit", new Color(0.943f, 0.576f, 0.316f));
-                    av.WithBodyLayer("Avatar/Layers/Bottom/Jeans", new Color(1.0f, 1.0f, 1.0f));
-                    av.WithAccessoryLayer("Avatar/Accessories/Feet/Sneakers/Sneakers", new Color(1.0f, 1.0f, 1.0f));
+                    av.HairPath = "Avatar/Hair/Peaked/Peaked";
+                    av.WithFaceLayer("Avatar/Layers/Face/Face_Neutral", Color.black);
+                    av.WithFaceLayer("Avatar/Layers/Face/FacialHair_Stubble", Color.black);
+                    av.WithBodyLayer("Avatar/Layers/Top/Buttonup", new Color(0.151f, 0.151f, 0.151f));
+                    av.WithBodyLayer("Avatar/Layers/Bottom/Jeans", new Color(0.151f, 0.151f, 0.151f));
+                    av.WithAccessoryLayer("Avatar/Accessories/Feet/CombatBoots/CombatBoots", new Color(0.151f, 0.151f, 0.151f));
+                    av.WithAccessoryLayer("Avatar/Accessories/Chest/BulletproofVest/BulletproofVest", new Color(0.151f, 0.151f, 0.151f));
                 })
                 .WithSpawnPosition(spawnPos)
                 .EnsureCustomer()
@@ -97,8 +98,61 @@ namespace WeaponShipments.NPCs
                 base.OnCreated();
                 Appearance.Build();
 
-                Aggressiveness = 5f;
-                Region = Region.Uptown;
+                Dialogue.BuildAndSetDatabase(db => {
+                    db.WithModuleEntry("Reactions", "GREETING", "Welcome.");
+                });
+                Dialogue.BuildAndRegisterContainer("AlexShop", c => {
+                    c.AddNode("ENTRY", "What do you want?", ch => {
+                        ch.Add("PAY_FOR_INFO", "I want to start smuggling weapons.", "INFO_NODE")
+                            .Add("NO_THANKS", "Nothing.", "EXIT");
+                    });
+                    c.AddNode("INFO_NODE", "I sent you the app", ch => {
+                        ch.Add("BYE", "Thanks", "EXIT");
+                    });
+                    c.AddNode("NOT_ENOUGH", "Who are you?", ch => {
+                        ch.Add("BACK", "I'll come back.", "ENTRY");
+                    });
+                    c.AddNode("EXIT", "See you.");
+                });
+
+                Dialogue.OnChoiceSelected("PAY_FOR_INFO", () =>
+                {
+                    var fr = LevelManager.CurrentRank;   // FullRank
+
+                    MelonLogger.Msg($"[RankCheck] Rank = {fr.Rank}, Tier = {fr.Tier}");
+
+                    const Rank RequiredRank = Rank.Hoodlum;
+
+                    bool pass = fr.Rank >= RequiredRank;
+
+                    MelonLogger.Msg($"[RankCheck] Required = {RequiredRank}, Pass = {pass}");
+
+                    if (pass)
+                    {
+                        MelonLogger.Msg("[RankCheck] JUMP -> INFO_NODE");
+                        Dialogue.JumpTo("RankCheck", "INFO_NODE");
+                    }
+                    else
+                    {
+                        MelonLogger.Msg("[RankCheck] JUMP -> NOT_ENOUGH");
+                        Dialogue.JumpTo("RankCheck", "NOT_ENOUGH");
+                    }
+                });
+
+
+                Dialogue.OnNodeDisplayed("INFO_NODE", () => {
+                    // Ran when "Get scammed nerd." is shown
+                });
+
+                Dialogue.OnChoiceSelected("BYE", () =>
+                {
+                    Dialogue.StopOverride();
+                    SendTextMessage("You got scammed");
+                });
+
+                Dialogue.UseContainerOnInteract("AlexShop");
+                Aggressiveness = 3f;
+                Region = Region.Northtown;
 
                 // Customer.RequestProduct();
 
@@ -112,5 +166,4 @@ namespace WeaponShipments.NPCs
         }
     }
 }
-
 
