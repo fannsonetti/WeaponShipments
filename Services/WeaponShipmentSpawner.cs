@@ -125,12 +125,17 @@ namespace WeaponShipments.Services
 
         private static void RenameChildCubeToWeaponShipment(Transform root)
         {
-            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+            if (root == null) 
+                return;
+
+            // Check root itself
+            if (root.name == "Cube")
+                root.name = "WeaponShipment";
+
+            // Recursively traverse children
+            for (int i = 0; i < root.childCount; i++)
             {
-                if (t.name == "Cube")
-                {
-                    t.name = "WeaponShipment";
-                }
+                RenameChildCubeToWeaponShipment(root.GetChild(i));
             }
         }
 

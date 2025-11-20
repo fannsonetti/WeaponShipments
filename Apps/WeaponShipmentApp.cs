@@ -11,6 +11,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using WeaponShipments.Components;
 using WeaponShipments.Services;
 using static MelonLoader.MelonLogger;
 
@@ -278,7 +279,7 @@ namespace WeaponShipments.Apps
             _detailsPanel.SetActive(true);
         }
 
-        private void UpdateStatusColor(string status)
+        public void UpdateStatusColor(string status)
         {
             if (_statusValue == null)
                 return;
@@ -547,75 +548,6 @@ namespace WeaponShipments.Apps
                 textRT.offsetMax = Vector2.zero;
 
                 iconText.color = new Color(0.8f, 0.8f, 0.8f, 1f);
-            }
-        }
-
-        // ---------------- PER-ROW COOLDOWN UI ----------------
-
-        private class RowCooldownUI : MonoBehaviour
-        {
-            private Text _timerText;
-            private string _shipmentId;
-
-            public void Init(string shipmentId, Text timerText)
-            {
-                _shipmentId = shipmentId;
-                _timerText = timerText;
-            }
-
-            private void Update()
-            {
-                if (_timerText == null || string.IsNullOrEmpty(_shipmentId))
-                    return;
-
-                TimeSpan remaining;
-                bool onCooldown = ShipmentManager.Instance.TryGetCooldownRemaining(_shipmentId, out remaining);
-
-                if (onCooldown && remaining.TotalSeconds > 0)
-                {
-                    if (remaining.TotalSeconds < 0)
-                        remaining = TimeSpan.Zero;
-
-                    _timerText.gameObject.SetActive(true);
-                    _timerText.text = remaining.ToString(@"mm\:ss");
-                }
-                else
-                {
-                    _timerText.gameObject.SetActive(false);
-                }
-            }
-        }
-
-        // ---------------- AUTO-REFRESH WHILE APP OPEN ----------------
-
-        private class AutoRefreshUI : MonoBehaviour
-        {
-            private float _timer = 0f;
-
-            private void Update()
-            {
-                if (WeaponShipmentApp.Instance == null)
-                    return;
-
-                _timer += Time.deltaTime;
-                if (_timer < 1f)
-                    return;
-
-                _timer = 0f;
-
-                var app = WeaponShipmentApp.Instance;
-                app.RefreshList();
-
-                if (!string.IsNullOrEmpty(app._selectedShipmentId))
-                {
-                    var s = ShipmentManager.Instance.GetShipment(app._selectedShipmentId);
-                    if (s != null)
-                    {
-                        app._statusValue.text = app.GetStatusDisplayText(s);
-                        app.UpdateStatusColor(s.Status);
-                        app.UpdateActionButtonForStatus(s.Status);
-                    }
-                }
             }
         }
     }
