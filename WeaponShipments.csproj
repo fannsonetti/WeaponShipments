@@ -142,13 +142,18 @@
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="Core.cs" />
-		<Compile Include="NPCs\WeaponSmuggler.cs" />
-		<Compile Include="Services\DeliveryAreaSpawner.cs" />
+		<Compile Include="Data\BusinessConfig.cs" />
+		<Compile Include="Data\WeaponShipmentsPrefs.cs" />
+		<Compile Include="Data\WeaponShipmentsSaveData.cs" />
+		<Compile Include="Logic\SellCalculator.cs" />
+		<Compile Include="Logic\StockConverter.cs" />
+		<Compile Include="NPCs\Agent28.cs" />
+		<Compile Include="Services\ShipmentSpawner.cs" />
 		<Compile Include="Services\ShipmentPayouts.cs" />
-		<Compile Include="Services\WeaponShipmentSpawner.cs" />
 		<Compile Include="Utils\Constants.cs" />
-		<Compile Include="Apps\WeaponShipmentApp.cs" />
+		<Compile Include="UI\WeaponShipmentApp.cs" />
 		<Compile Include="Services\ShipmentManager.cs" />
+		<Compile Include="Data\BusinessState.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\*.png" />
@@ -163,7 +168,7 @@
 		</Reference>
 	</ItemGroup>
 	<ItemGroup>
-	  <Folder Include="Resources\" />
+	  <None Include="Data\BusinessState.cs" />
 	</ItemGroup>
 
 	<PropertyGroup>

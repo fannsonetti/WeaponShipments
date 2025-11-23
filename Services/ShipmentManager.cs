@@ -24,18 +24,12 @@ namespace WeaponShipments.Services
         }
 
         // 5-minute cooldown per weapon after finishing
-        private const float PerGunCooldownSeconds = 5f * 60f;
+        private const float PerGunCooldownSeconds = 30f;
 
         // Weapon list (one slot per weapon)
         private static readonly string[] GunTypes =
         {
-            "Baseball Bat",
-            "Machete",
-            "Revolver",
-            "M1911",
-            "Pump Shotgun",
-            "AK-47",
-            "Minigun"
+            "Shipment"
         };
 
         // Origins
@@ -111,11 +105,6 @@ namespace WeaponShipments.Services
 
             return _shipments.Find(s => s.Id == id);
         }
-
-        /// <summary>
-        /// True if there is a shipment "In Progress" and not yet delivered.
-        /// Only 1 allowed at a time.
-        /// </summary>
         public bool HasActiveInProgressShipment()
         {
             foreach (var s in _shipments)
@@ -126,10 +115,6 @@ namespace WeaponShipments.Services
 
             return false;
         }
-
-        /// <summary>
-        /// Accepts a shipment if no other "In Progress" exists and it is not on cooldown.
-        /// </summary>
         public bool AcceptShipment(string id)
         {
             var shipment = GetShipment(id);
@@ -199,7 +184,7 @@ namespace WeaponShipments.Services
             shipment.Origin = Origins[UnityEngine.Random.Range(0, Origins.Length)];
             shipment.Destination = Destinations[UnityEngine.Random.Range(0, Destinations.Length)];
             shipment.ProductForm = ProductForms[UnityEngine.Random.Range(0, ProductForms.Length)];
-            shipment.Quantity = UnityEngine.Random.Range(1, 4);
+            shipment.Quantity = 1;
 
             MelonLogger.Msg($"[ShipmentManager] {shipment.GunType} enters cooldown.");
         }
@@ -263,7 +248,7 @@ namespace WeaponShipments.Services
                     Status = "Pending",
                     Delivered = false,
                     Updated = DateTime.Now,
-                    Quantity = UnityEngine.Random.Range(1, 4)
+                    Quantity = 1
                 };
 
                 _shipments.Add(entry);
