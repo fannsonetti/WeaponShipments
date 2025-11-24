@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<RootNamespace>MoreNPCs</RootNamespace>
+		<RootNamespace>WeaponShipments</RootNamespace>
 		<LangVersion>default</LangVersion>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<Configurations>Mono;Il2cpp;CrossCompat</Configurations>
@@ -27,6 +27,15 @@
 		<AssemblyName>WeaponShipments_il2cpp</AssemblyName>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)'=='CrossCompat'">
+		<GamePath>D:\Schedule 1 Dependencies\Mono</GamePath>
+		<ManagedPath>$(GamePath)\Schedule I_Data\Managed</ManagedPath>
+		<MelonLoaderPath>$(GamePath)\MelonLoader\net35</MelonLoaderPath>
+		<ModsPath>$(GamePath)\Mods</ModsPath>
+		<DefineConstants>CROSS_COMPAT</DefineConstants>
+		<AssemblyName>WeaponShipments</AssemblyName>
+	</PropertyGroup>
+
 	<PropertyGroup>
 		<UsePublicized>false</UsePublicized>
 	</PropertyGroup>
@@ -42,6 +51,51 @@
 
 	<!-- Mono references -->
 	<ItemGroup Condition="'$(Configuration)'=='Mono'">
+		<Reference Include="com.rlabrecque.steamworks.net">
+			<HintPath>$(ManagedPath)\com.rlabrecque.steamworks.net.dll</HintPath>
+		</Reference>
+		<Reference Include="FishNet.Runtime">
+			<HintPath>$(ManagedPath)\FishNet.Runtime.dll</HintPath>
+		</Reference>
+		<Reference Include="Newtonsoft.Json">
+			<HintPath>$(ManagedPath)\Newtonsoft.Json.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.TextMeshPro">
+			<HintPath>$(ManagedPath)\Unity.TextMeshPro.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.AssetBundleModule">
+			<HintPath>$(ManagedPath)\UnityEngine.AssetBundleModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.CoreModule">
+			<HintPath>$(ManagedPath)\UnityEngine.CoreModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.JSONSerializeModule">
+			<HintPath>$(ManagedPath)\UnityEngine.JSONSerializeModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.TextRenderingModule">
+			<HintPath>$(ManagedPath)\UnityEngine.TextRenderingModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UI">
+			<HintPath>$(ManagedPath)\UnityEngine.UI.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UIElementsModule">
+			<HintPath>$(ManagedPath)\UnityEngine.UIElementsModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UIModule">
+			<HintPath>$(ManagedPath)\UnityEngine.UIModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.PhysicsModule">
+			<HintPath>$(ManagedPath)\UnityEngine.PhysicsModule.dll</HintPath>
+		</Reference>
+		<Reference Include="MelonLoader">
+			<HintPath>$(MelonLoaderPath)\MelonLoader.dll</HintPath>
+		</Reference>
+		<Reference Include="0Harmony">
+			<HintPath>$(MelonLoaderPath)\0Harmony.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(Configuration)'=='CrossCompat'">
 		<Reference Include="com.rlabrecque.steamworks.net">
 			<HintPath>$(ManagedPath)\com.rlabrecque.steamworks.net.dll</HintPath>
 		</Reference>
@@ -154,7 +208,6 @@
 		<Compile Include="UI\WeaponShipmentApp.cs" />
 		<Compile Include="Services\ShipmentManager.cs" />
 		<Compile Include="Data\BusinessState.cs" />
-		<Compile Include="Quests\StealSupplies.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\*.png" />
@@ -167,6 +220,10 @@
 			<HintPath>$(S1APILocalPath)</HintPath>
 			<Private>True</Private>
 		</Reference>
+	</ItemGroup>
+	<ItemGroup>
+	  <EmbeddedResource Remove="Quests\**" />
+	  <None Remove="Quests\**" />
 	</ItemGroup>
 	<ItemGroup>
 	  <None Include="Data\BusinessState.cs" />

@@ -34,14 +34,14 @@ namespace WeaponShipments.NPCs
 
             string[] lines =
             {
-        $"Storage is full, {maxStock} units at capacity.",
-        $"Warehouse maxed out. {maxStock} units sitting in storage.",
-        $"Production paused. We're holding {maxStock}/{maxStock} units.",
-        $"Shelves packed. Capacity reached at {maxStock} units.",
-        $"Output halted. Storage maxed at {maxStock} units.",
-        $"Can't add more stock, {maxStock} units on hand.",
-        $"Inventory space tapped out. {maxStock} units stored."
-    };
+                $"Storage is full, {maxStock} units at capacity.",
+                $"Warehouse maxed out. {maxStock} units sitting in storage.",
+                $"Production paused. We're holding {maxStock}/{maxStock} units.",
+                $"Shelves packed. Capacity reached at {maxStock} units.",
+                $"Output halted. Storage maxed at {maxStock} units.",
+                $"Can't add more stock, {maxStock} units on hand.",
+                $"Inventory space tapped out. {maxStock} units stored."
+            };
 
             int i = UnityEngine.Random.Range(0, lines.Length);
             Instance.SendTextMessage(lines[i]);
@@ -54,16 +54,16 @@ namespace WeaponShipments.NPCs
 
             string[] lines =
             {
-        "We're out of supplies. Nothing left to process.",
-        "Supplies just hit zero. Can't make product until we restock.",
-        "Nothing left to work with. Storage is empty.",
-        "Supply count reached 0. We’re tapped for now.",
-        "We're completely out of materials.",
-        "Zero supplies remaining. We need a restock ASAP.",
-        "No supplies left on hand. Storage is cleared out.",
-        "We burned through the last of it. Supply is at zero.",
-        "Office is empty. Nothing left to pull from.",
-    };
+                "We're out of supplies. Nothing left to process.",
+                "Supplies just hit zero. Can't make product until we restock.",
+                "Nothing left to work with. Storage is empty.",
+                "Supply count reached 0. We’re tapped for now.",
+                "We're completely out of materials.",
+                "Zero supplies remaining. We need a restock ASAP.",
+                "No supplies left on hand. Storage is cleared out.",
+                "We burned through the last of it. Supply is at zero.",
+                "Office is empty. Nothing left to pull from.",
+            };
 
             int i = UnityEngine.Random.Range(0, lines.Length);
             Instance.SendTextMessage(lines[i]);
@@ -78,14 +78,67 @@ namespace WeaponShipments.NPCs
 
             string[] lines =
             {
-        $"Supplies just landed at the office.",
-        $"Delivery arrived, fresh supplies on site.",
-        $"New materials checked in. Supplies restocked.",
-        $"Shipment just came through the door.",
-        $"Office received the latest shipment.",
-        $"Fresh batch of materials arrived at HQ.",
-        $"Shipment delivered. Supplies are ready to use."
-    };
+                $"Supplies just landed at the office.",
+                $"Delivery arrived, fresh supplies on site.",
+                $"New materials checked in. Supplies restocked.",
+                $"Shipment just came through the door.",
+                $"Office received the latest shipment.",
+                $"Fresh batch of materials arrived at HQ.",
+                $"Shipment delivered. Supplies are ready to use."
+            };
+
+            int i = UnityEngine.Random.Range(0, lines.Length);
+            Instance.SendTextMessage(lines[i]);
+        }
+
+        /// <summary>
+        /// Called when a steal-supplies job is started and the pickup location is active.
+        /// </summary>
+        public static void NotifyStealPickup(string pickupLocation)
+        {
+            if (Instance == null)
+                return;
+
+            string[] lines =
+            {
+                $"Shipment spotted at {pickupLocation}. Go collect it.",
+                $"There's a load waiting at {pickupLocation}. Pick it up.",
+                $"Supplies are sitting at {pickupLocation}. Go grab the batch.",
+                $"A fresh drop just landed at {pickupLocation}. Retrieve it quietly.",
+                $"Crates are staged at {pickupLocation}. Go scoop them up.",
+                $"Supplies left unattended at {pickupLocation}. Move in and take them.",
+                $"Found a shipment at {pickupLocation}. Get your hands on it.",
+                $"There's gear sitting at {pickupLocation}. Pick it up before it moves.",
+                $"Cargo sitting out at {pickupLocation}. Go secure the load.",
+                $"A full batch is resting at {pickupLocation}. Collect it now."
+            };
+
+            int i = UnityEngine.Random.Range(0, lines.Length);
+            Instance.SendTextMessage(lines[i]);
+        }
+
+        /// <summary>
+        /// Intended for when the pickup is done and the player is sent to the dropoff.
+        /// Call this from your crate pickup logic when you swap to the delivery phase.
+        /// </summary>
+        public static void NotifyStealDropoff(string dropoffLocation)
+        {
+            if (Instance == null)
+                return;
+
+            string[] lines =
+            {
+                $"Got a spot for that load — bring it to {dropoffLocation}.",
+                $"Drop point ready. Move the shipment to {dropoffLocation}.",
+                $"Take what you collected and head to {dropoffLocation}.",
+                $"Route updated. Deliver the batch to {dropoffLocation}.",
+                $"Now bring everything you picked up to {dropoffLocation}.",
+                $"Delivery zone’s set. Get the load to {dropoffLocation}.",
+                $"All right, move the cargo to {dropoffLocation}.",
+                $"Drop it off at {dropoffLocation} once you're clear.",
+                $"Your destination is {dropoffLocation}. Bring the shipment in.",
+                $"Head to {dropoffLocation} and hand off the load."
+            };
 
             int i = UnityEngine.Random.Range(0, lines.Length);
             Instance.SendTextMessage(lines[i]);
@@ -100,10 +153,10 @@ namespace WeaponShipments.NPCs
 
             string[] lines =
             {
-        $"Sell run to {destinationName} complete. Moved {stockSold:0.#} units for ~${payout:N0}.",
-        $"Report from {destinationName}: {stockSold:0.#} units offloaded, around {payoutK:0.#}k in cash.",
-        $"Job wrapped at {destinationName}. {stockSold:0.#} stock sold, payout ~${payout:N0}."
-    };
+                $"Sell run to {destinationName} complete. Moved {stockSold:0.#} units for ~${payout:N0}.",
+                $"Report from {destinationName}: {stockSold:0.#} units offloaded, around {payoutK:0.#}k in cash.",
+                $"Job wrapped at {destinationName}. {stockSold:0.#} stock sold, payout ~${payout:N0}."
+            };
 
             int i = UnityEngine.Random.Range(0, lines.Length);
             Instance.SendTextMessage(lines[i]);
@@ -128,32 +181,32 @@ namespace WeaponShipments.NPCs
             // --- Openers talking about % lost ---
             string[] percentLines =
             {
-        $"We just got hit. Around {percent}% of our stock is gone.",
-        $"Cops swept the place. Looks like about {percent}% of our stash is missing.",
-        $"Bad news. Raid went through the warehouse – roughly {percent}% gone.",
-        $"Warehouse got tossed. We're down about {percent}% of product.",
-        $"{percent}% of what we had just vanished. Raid hit harder than expected."
-    };
+                $"We just got hit. Around {percent}% of our stock is gone.",
+                $"Cops swept the place. Looks like about {percent}% of our stash is missing.",
+                $"Bad news. Raid went through the warehouse – roughly {percent}% gone.",
+                $"Warehouse got tossed. We're down about {percent}% of product.",
+                $"{percent}% of what we had just vanished. Raid hit harder than expected."
+            };
 
             // --- Follow-ups talking about value lost ---
             string[] valueLines =
             {
-        $"Numbers came in... missing roughly {valueK:0.#}k worth.",
-        $"Accounting ran it – about {valueK:0.#}k in product is gone.",
-        $"Rough estimate puts the loss at ~{valueK:0.#}k.",
-        $"On paper, that's around {valueK:0.#}k down the drain.",
-        $"Call it {valueK:0.#}k gone, give or take."
-    };
+                $"Numbers came in... missing roughly {valueK:0.#}k worth.",
+                $"Accounting ran it – about {valueK:0.#}k in product is gone.",
+                $"Rough estimate puts the loss at ~{valueK:0.#}k.",
+                $"On paper, that's around {valueK:0.#}k down the drain.",
+                $"Call it {valueK:0.#}k gone, give or take."
+            };
 
             // --- Combined one-shot messages (% + value) ---
             string[] combinedLines =
             {
-        $"We got raided. Value loss is {valueK:0.#}k, around {percent}% gone.",
-        $"Raid report: about {percent}% of stock wiped, roughly {valueK:0.#}k in losses.",
-        $"Warehouse hit. Estimate {valueK:0.#}k missing, close to {percent}% of what we had.",
-        $"Police tore through. Roughly {percent}% gone – around {valueK:0.#}k in product.",
-        $"Summary: {percent}% of inventory, about {valueK:0.#}k, is off the books."
-    };
+                $"We got raided. Value loss is {valueK:0.#}k, around {percent}% gone.",
+                $"Raid report: about {percent}% of stock wiped, roughly {valueK:0.#}k in losses.",
+                $"Warehouse hit. Estimate {valueK:0.#}k missing, close to {percent}% of what we had.",
+                $"Police tore through. Roughly {percent}% gone – around {valueK:0.#}k in product.",
+                $"Summary: {percent}% of inventory, about {valueK:0.#}k, is off the books."
+            };
 
             // Decide: combined vs double-text
             bool combined = UnityEngine.Random.value < 0.4f; // ~40% of the time, single combined msg
@@ -318,4 +371,3 @@ namespace WeaponShipments.NPCs
         }
     }
 }
-

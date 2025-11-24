@@ -45,7 +45,7 @@ namespace WeaponShipments.UI
 
         protected override string AppName => "WeaponShipmentApp";
         protected override string AppTitle => "Disruption Logistics";
-        protected override string IconLabel => "Logistics";
+        protected override string IconLabel => "D-Logistics";
         protected override string IconFileName => string.Empty;
 
         // Status bar UI references (all pages)
@@ -405,6 +405,33 @@ namespace WeaponShipments.UI
                 // Next frame – stays in sync with in-game time
                 yield return null;
             }
+        }
+
+        private static IEnumerator DelayedDropoffPhase(string shipmentId, string dropoffLocation)
+        {
+            // Wait 60 seconds (real-time)
+            yield return new WaitForSeconds(60f);
+
+            // Agent 28 dropoff message set
+            string[] dropoffLines =
+            {
+        $"Got a spot for that load — bring it to {dropoffLocation}.",
+        $"Drop point ready. Move the shipment to {dropoffLocation}.",
+        $"Take what you collected and head to {dropoffLocation}.",
+        $"Route updated. Deliver the batch to {dropoffLocation}.",
+        $"Now bring everything you picked up to {dropoffLocation}.",
+        $"Delivery zone’s set. Get the load to {dropoffLocation}.",
+        $"All right, move the cargo to {dropoffLocation}.",
+        $"Drop it off at {dropoffLocation} once you're clear.",
+        $"Your destination is {dropoffLocation}. Bring the shipment in.",
+        $"Head to {dropoffLocation} and hand off the load."
+    };
+
+            int d = UnityEngine.Random.Range(0, dropoffLines.Length);
+            Agent28.Instance?.SendTextMessage(dropoffLines[d]);
+
+            // Only now spawn the delivery area
+            ShipmentSpawner.SpawnDeliveryArea(shipmentId);
         }
 
         // ---------------- MAIN / NAV + CONTENT ----------------
@@ -846,7 +873,7 @@ namespace WeaponShipments.UI
             string displayName,
             string priceText,
             Action onClick
-        ) 
+        )
         {
             // 3:4-ish pillar card
             var card = UIFactory.Panel(
@@ -1928,7 +1955,7 @@ namespace WeaponShipments.UI
                 container.transform,
                 disruptionFontSize,
                 TextAnchor.LowerLeft,
-                FontStyle.Bold
+                FontStyle.BoldAndItalic
             );
             disruptionText.color = new Color(0.9f, 0.1f, 0.1f);
             var dRT = disruptionText.GetComponent<RectTransform>();
@@ -1943,7 +1970,7 @@ namespace WeaponShipments.UI
                 container.transform,
                 logisticsFontSize,
                 TextAnchor.UpperLeft,
-                FontStyle.Normal
+                FontStyle.Italic
             );
             logisticsText.color = Color.white;
             var lRT = logisticsText.GetComponent<RectTransform>();
@@ -1984,15 +2011,40 @@ namespace WeaponShipments.UI
             {
                 WeaponShipmentApp.ShowAlertStatic(
                     "No shipment available",
-                    "All routes are currently on cooldown.",
+                    "No shipment available to intercept.",
                     true
                 );
                 return;
             }
 
+            // Register the job + spawn only the pickup crate for now
             BusinessState.RegisterResupplyJobStarted();
             ShipmentSpawner.SpawnShipmentCrate(chosen);
-            ShipmentSpawner.SpawnDeliveryArea(chosen.Id);
+            // NOTE: delivery area is spawned later in DelayedDropoffPhase
+
+            // --- Agent 28 messaging setup ---
+            string pickupLocation = chosen.Origin;
+            string dropoffLocation = chosen.Destination;
+
+            string[] pickupLines =
+            {
+        $"Shipment spotted at {pickupLocation}. Go collect it.",
+        $"There's a load waiting at {pickupLocation}. Pick it up.",
+        $"Supplies are sitting at {pickupLocation}. Go grab the batch.",
+        $"A fresh drop just landed at {pickupLocation}. Retrieve it quietly.",
+        $"Crates are staged at {pickupLocation}. Go scoop them up.",
+        $"Supplies left unattended at {pickupLocation}. Move in and take them.",
+        $"Found a shipment at {pickupLocation}. Get your hands on it.",
+        $"There's gear sitting at {pickupLocation}. Pick it up before it moves.",
+        $"Cargo sitting out at {pickupLocation}. Go secure the load.",
+        $"A full batch is resting at {pickupLocation}. Collect it now."
+    };
+
+            int p = UnityEngine.Random.Range(0, pickupLines.Length);
+            Agent28.Instance?.SendTextMessage(pickupLines[p]);
+
+            // Start the delayed dropoff phase (60s later: dropoff text + delivery area spawn)
+            MelonCoroutines.Start(DelayedDropoffPhase(chosen.Id, dropoffLocation));
 
             Msg(
                 "[WeaponShipmentApp] Started steal job for {0} (qty {1}) – origin: {2}, dest: {3}",
@@ -2069,7 +2121,7 @@ namespace WeaponShipments.UI
 
             WeaponShipmentApp.ShowAlertStatic(
                 "Supplies ordered",
-                $"Shipment arriving in {Mathf.RoundToInt(delaySeconds)} seconds (in-game).",
+                $"Shipment arriving in {Mathf.RoundToInt(delaySeconds / 60f)} minutes.",
                 false
             );
 

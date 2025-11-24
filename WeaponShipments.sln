@@ -7,12 +7,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeaponShipments", "WeaponSh
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		CrossCompat|Any CPU = CrossCompat|Any CPU
 		Il2cpp|Any CPU = Il2cpp|Any CPU
 		Mono|Any CPU = Mono|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{65791FB3-47F8-4263-8BF7-45E3284BE9DF}.Il2cpp|Any CPU.ActiveCfg = Il2cpp|Any CPU
-		{65791FB3-47F8-4263-8BF7-45E3284BE9DF}.Il2cpp|Any CPU.Build.0 = Il2cpp|Any CPU
+		{65791FB3-47F8-4263-8BF7-45E3284BE9DF}.CrossCompat|Any CPU.ActiveCfg = CrossCompat|Any CPU
+		{65791FB3-47F8-4263-8BF7-45E3284BE9DF}.CrossCompat|Any CPU.Build.0 = CrossCompat|Any CPU
+		{65791FB3-47F8-4263-8BF7-45E3284BE9DF}.Il2cpp|Any CPU.ActiveCfg = CrossCompat|Any CPU
+		{65791FB3-47F8-4263-8BF7-45E3284BE9DF}.Il2cpp|Any CPU.Build.0 = CrossCompat|Any CPU
 		{65791FB3-47F8-4263-8BF7-45E3284BE9DF}.Mono|Any CPU.ActiveCfg = Mono|Any CPU
 		{65791FB3-47F8-4263-8BF7-45E3284BE9DF}.Mono|Any CPU.Build.0 = Mono|Any CPU
 	EndGlobalSection

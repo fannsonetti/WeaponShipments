@@ -67,7 +67,7 @@ namespace WeaponShipments.Data
             // ---------------- BASE ECONOMY ----------------
             BuySuppliesPrice = _category.CreateEntry(
                 "BuySuppliesPrice",
-                75000,
+                7500,
                 "Buy Supplies Price",
                 "Cost to buy a full batch of supplies."
             );
@@ -81,14 +81,14 @@ namespace WeaponShipments.Data
 
             PriceHyland = _category.CreateEntry(
                 "PriceHyland",
-                5000,
+                500,
                 "Hyland Point Price",
                 "Money earned per unit stock when selling to Hyland Point."
             );
 
             PriceSerena = _category.CreateEntry(
                 "PriceSerena",
-                7500,
+                750,
                 "Serena Flats Price",
                 "Money earned per unit stock when selling to Serena Flats."
             );
@@ -146,7 +146,7 @@ namespace WeaponShipments.Data
             // ---------------- EQUIPMENT UPGRADE ----------------
             EquipmentUpgradePrice = _category.CreateEntry(
                 "EquipmentUpgradePrice",
-                1155000,
+                115500,
                 "Equipment Upgrade Price",
                 "Cost of the Equipment upgrade."
             );
@@ -175,7 +175,7 @@ namespace WeaponShipments.Data
             // ---------------- STAFF UPGRADE -------------------
             StaffUpgradePrice = _category.CreateEntry(
                 "StaffUpgradePrice",
-                598500,
+                59800,
                 "Staff Upgrade Price",
                 "Cost of the Staff upgrade."
             );
@@ -190,7 +190,7 @@ namespace WeaponShipments.Data
             // ---------------- SECURITY UPGRADE ----------------
             SecurityUpgradePrice = _category.CreateEntry(
                 "SecurityUpgradePrice",
-                351000,
+                35000,
                 "Security Upgrade Price",
                 "Cost of the Security upgrade."
             );
