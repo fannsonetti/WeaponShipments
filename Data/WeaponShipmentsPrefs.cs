@@ -12,6 +12,7 @@ namespace WeaponShipments.Data
 
         // ---------------- BASE ECONOMY ----------------
         public static MelonPreferences_Entry<int> BuySuppliesPrice;
+        public static MelonPreferences_Entry<float> BuySuppliesDeliveryDelay;
         public static MelonPreferences_Entry<int> PriceHyland;
         public static MelonPreferences_Entry<int> PriceSerena;
 
@@ -71,6 +72,13 @@ namespace WeaponShipments.Data
                 "Cost to buy a full batch of supplies."
             );
 
+            BuySuppliesDeliveryDelay = _category.CreateEntry(
+                "BuySuppliesDeliveryDelay",
+                600f,
+                "Supplies Delivery Delay",
+                "How long (in seconds) a purchased supply shipment takes to arrive."
+            );
+
             PriceHyland = _category.CreateEntry(
                 "PriceHyland",
                 5000,
@@ -94,7 +102,7 @@ namespace WeaponShipments.Data
 
             ConversionInterval = _category.CreateEntry(
                 "ConversionInterval",
-                5f,
+                120f,
                 "Conversion Interval",
                 "Seconds between automatic supply-to-stock conversions."
             );
@@ -102,21 +110,21 @@ namespace WeaponShipments.Data
             // ---------------- RAID CONFIG ----------------
             RaidMinStockToTrigger = _category.CreateEntry(
                 "RaidMinStockToTrigger",
-                25,
+                20,
                 "Minimum Stock For Raids",
                 "Raids only occur when your stock is above this amount."
             );
 
             RaidCheckInterval = _category.CreateEntry(
                 "RaidCheckInterval",
-                5f,
+                60f,
                 "Raid Check Interval",
                 "Seconds between raid chance checks."
             );
 
             RaidBaseChance = _category.CreateEntry(
                 "RaidBaseChance",
-                0.01f,
+                0.02f,
                 "Raid Base Chance",
                 "Base chance (0–1) at 100% stock for a raid to trigger."
             );
@@ -189,9 +197,9 @@ namespace WeaponShipments.Data
 
             SecurityRaidChanceMultiplier = _category.CreateEntry(
                 "SecurityRaidChanceMultiplier",
-                0.5f,
+                0.25f,
                 "Security Raid Chance Multiplier",
-                "Raid chance is multiplied by this when Security is owned."
+                "Raid change from Security upgrade (0.25 = -75%)."
             );
         }
     }

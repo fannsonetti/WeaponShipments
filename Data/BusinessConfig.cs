@@ -1,4 +1,6 @@
-﻿namespace WeaponShipments.Data
+﻿using WeaponShipments.Data;
+
+namespace WeaponShipments.Data
 {
     public static class BusinessConfig
     {
@@ -12,8 +14,10 @@
         public static int BuySuppliesPrice => WeaponShipmentsPrefs.BuySuppliesPrice.Value;
         public static int PriceHyland => WeaponShipmentsPrefs.PriceHyland.Value;
         public static int PriceSerena => WeaponShipmentsPrefs.PriceSerena.Value;
+
         public static float StockPerSupply => WeaponShipmentsPrefs.StockPerSupply.Value;
         public static float ConversionInterval => WeaponShipmentsPrefs.ConversionInterval.Value;
+        public static float BuySuppliesDeliveryDelay => WeaponShipmentsPrefs.BuySuppliesDeliveryDelay.Value;
 
         // ---------------- RAID CONFIG ----------------
 

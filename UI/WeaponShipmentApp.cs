@@ -27,6 +27,8 @@ namespace WeaponShipments.UI
         private static bool _conversionRoutineStarted;
         private static bool _raidRoutineStarted;
 
+        private static bool _supplyShipmentRoutineStarted;
+
         private GameObject _loginPanel;
         private GameObject _homePanel;
 
@@ -89,6 +91,11 @@ namespace WeaponShipments.UI
             {
                 MelonCoroutines.Start(RaidRoutine());
                 _raidRoutineStarted = true;
+            }
+            if (!_supplyShipmentRoutineStarted)
+            {
+                MelonCoroutines.Start(SupplyShipmentRoutine());
+                _supplyShipmentRoutineStarted = true;
             }
         }
 
@@ -355,6 +362,49 @@ namespace WeaponShipments.UI
                 yield break;
 
             app._alertPanel.SetActive(false);
+        }
+
+        private static IEnumerator SupplyShipmentRoutine()
+        {
+            while (true)
+            {
+                var save = WeaponShipmentsSaveData.Instance;
+                var data = save != null ? save.Data : null;
+
+                if (data != null && data.HasPendingSupplyShipment)
+                {
+                    // Count down using IN-GAME time
+                    data.SupplyShipmentArrives -= Time.deltaTime;
+
+                    if (data.SupplyShipmentArrives <= 0f)
+                    {
+                        data.SupplyShipmentArrives = 0f;
+                        data.HasPendingSupplyShipment = false;
+
+                        // Deliver a full batch (or as much as fits)
+                        float before = BusinessState.Supplies;
+                        BusinessState.TryAddSupplies(BusinessConfig.MaxSupplies);
+                        float added = BusinessState.Supplies - before;
+
+                        // Mark resupply complete for stats
+                        BusinessState.RegisterResupplyJobCompleted();
+
+                        // Notify Agent 28 that a shipment (not instant buy) arrived
+                        Agent28.NotifySuppliesArrived(
+                            (int)added,
+                            BusinessState.Supplies,
+                            true  // fromShipment
+                        );
+
+                        var app = Instance;
+                        if (app != null)
+                            app.UpdateBars();
+                    }
+                }
+
+                // Next frame – stays in sync with in-game time
+                yield return null;
+            }
         }
 
         // ---------------- MAIN / NAV + CONTENT ----------------
@@ -1958,6 +2008,7 @@ namespace WeaponShipments.UI
             float balance = Money.GetCashBalance();
             int price = BusinessConfig.BuySuppliesPrice;
 
+            // Already full
             if (BusinessState.Supplies >= BusinessConfig.MaxSupplies)
             {
                 WeaponShipmentApp.ShowAlertStatic(
@@ -1968,6 +2019,31 @@ namespace WeaponShipments.UI
                 return;
             }
 
+            // Get save data
+            var save = WeaponShipmentsSaveData.Instance;
+            var data = save != null ? save.Data : null;
+            if (data == null)
+            {
+                WeaponShipmentApp.ShowAlertStatic(
+                    "Save not ready",
+                    "Try again in a moment.",
+                    true
+                );
+                return;
+            }
+
+            // Only one paid shipment at a time
+            if (data.HasPendingSupplyShipment)
+            {
+                WeaponShipmentApp.ShowAlertStatic(
+                    "Shipment already on the way",
+                    "Wait for the current resupply to arrive before buying another.",
+                    true
+                );
+                return;
+            }
+
+            // Money check
             if (balance < price)
             {
                 WeaponShipmentApp.ShowAlertStatic(
@@ -1978,22 +2054,26 @@ namespace WeaponShipments.UI
                 return;
             }
 
+            // Pay now
             Money.ChangeCashBalance(-price);
 
-            int amount = BusinessConfig.MaxSupplies;
-            if (BusinessState.TryAddSupplies(amount))
-            {
-                Msg($"[WeaponShipmentApp] Bought {amount} supplies.");
+            // Start an IN-GAME timer, in seconds.
+            // This uses whatever delay you configured (e.g. 600f = 10 minutes).
+            float delaySeconds = BusinessConfig.BuySuppliesDeliveryDelay;
 
-                // Tell Agent 28 a purchase arrived
-                Agent28.NotifySuppliesArrived(
-                    amount,
-                    BusinessState.Supplies,
-                    false   // fromShipment = false (this was a purchase)
-                );
+            data.HasPendingSupplyShipment = true;
+            data.SupplyShipmentArrives = delaySeconds;
 
-                UpdateBars();
-            }
+            // Stats
+            BusinessState.RegisterResupplyJobStarted();
+
+            WeaponShipmentApp.ShowAlertStatic(
+                "Supplies ordered",
+                $"Shipment arriving in {Mathf.RoundToInt(delaySeconds)} seconds (in-game).",
+                false
+            );
+
+            UpdateBars();
         }
 
         private void OnEquipmentUpgradeClicked()

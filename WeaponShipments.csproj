@@ -154,6 +154,7 @@
 		<Compile Include="UI\WeaponShipmentApp.cs" />
 		<Compile Include="Services\ShipmentManager.cs" />
 		<Compile Include="Data\BusinessState.cs" />
+		<Compile Include="Quests\StealSupplies.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\*.png" />

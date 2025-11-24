@@ -17,6 +17,11 @@ namespace WeaponShipments.Data
             public float Supplies = 0f;
             public float Stock = 0f;
 
+            // Active delivery
+            public bool HasPendingSupplyShipment;
+            public float SupplyShipmentArrives;
+
+
             // Upgrades
             public bool EquipmentOwned = false;
             public bool StaffOwned = false;
