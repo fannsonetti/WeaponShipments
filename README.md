@@ -1,6 +1,3 @@
-Perfect — **clean, efficient, and polished** with a professional tone.
-I’ll now generate the **full README** using your approved structure and tone.
-
 ---
 
 # 📦 Weapon Shipments
