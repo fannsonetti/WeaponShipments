@@ -203,7 +203,6 @@
 		<Compile Include="Logic\StockConverter.cs" />
 		<Compile Include="NPCs\Agent28.cs" />
 		<Compile Include="Services\ShipmentSpawner.cs" />
-		<Compile Include="Services\ShipmentPayouts.cs" />
 		<Compile Include="Utils\Constants.cs" />
 		<Compile Include="UI\WeaponShipmentApp.cs" />
 		<Compile Include="Services\ShipmentManager.cs" />
@@ -220,10 +219,6 @@
 			<HintPath>$(S1APILocalPath)</HintPath>
 			<Private>True</Private>
 		</Reference>
-	</ItemGroup>
-	<ItemGroup>
-	  <EmbeddedResource Remove="Quests\**" />
-	  <None Remove="Quests\**" />
 	</ItemGroup>
 	<ItemGroup>
 	  <None Include="Data\BusinessState.cs" />

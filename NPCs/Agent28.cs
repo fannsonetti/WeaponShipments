@@ -231,7 +231,7 @@ namespace WeaponShipments.NPCs
 
         protected override void ConfigurePrefab(NPCPrefabBuilder builder)
         {
-            Vector3 spawnPos = new Vector3(72.263f, -4.535f, 30.9708f);
+            Vector3 spawnPos = new Vector3(0f, 500f, 0f);
             builder.WithIdentity("Agent28", "Agent 28", "")
                 .WithAppearanceDefaults(av =>
                 {

@@ -1991,7 +1991,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Already stealing",
                     "You must finish the current shipment before starting another.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2012,7 +2012,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "No shipment available",
                     "No shipment available to intercept.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2066,7 +2066,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Supplies storage already full",
                     "You can't hold any more supplies.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2079,7 +2079,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Save not ready",
                     "Try again in a moment.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2090,7 +2090,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Shipment already on the way",
                     "Wait for the current resupply to arrive before buying another.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2101,7 +2101,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Not enough money",
                     "You need more cash to buy supplies.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2135,7 +2135,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Already owned",
                     "You have already purchased this upgrade.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2148,7 +2148,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Not enough money",
                     "You need more cash to do this.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2171,7 +2171,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Already owned",
                     "You have already purchased this upgrade.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2184,7 +2184,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Not enough money",
                     "You need more cash to do this.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2207,7 +2207,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Already owned",
                     "You have already purchased this upgrade.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2220,7 +2220,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Not enough money",
                     "You need more cash to do this.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2244,7 +2244,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Delivery already in progress",
                     "Finish your current delivery before starting another.",
-                    true
+                    false
                 );
                 return;
             }
@@ -2278,7 +2278,7 @@ namespace WeaponShipments.UI
                 WeaponShipmentApp.ShowAlertStatic(
                     "Delivery already in progress",
                     "Finish your current delivery before starting another.",
-                    true
+                    false
                 );
                 return;
             }
