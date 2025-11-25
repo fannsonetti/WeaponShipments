@@ -2043,9 +2043,6 @@ namespace WeaponShipments.UI
             int p = UnityEngine.Random.Range(0, pickupLines.Length);
             Agent28.Instance?.SendTextMessage(pickupLines[p]);
 
-            // Start the delayed dropoff phase (60s later: dropoff text + delivery area spawn)
-            MelonCoroutines.Start(DelayedDropoffPhase(chosen.Id, dropoffLocation));
-
             Msg(
                 "[WeaponShipmentApp] Started steal job for {0} (qty {1}) – origin: {2}, dest: {3}",
                 chosen.GunType,

@@ -143,6 +143,70 @@ namespace WeaponShipments.NPCs
             int i = UnityEngine.Random.Range(0, lines.Length);
             Instance.SendTextMessage(lines[i]);
         }
+        public static void NotifySellJobStart(string spawnLabel, bool isVehicle, string dropoffLabel)
+        {
+            if (Instance == null)
+                return;
+
+            MelonCoroutines.Start(SellJobMessageRoutine(spawnLabel, isVehicle, dropoffLabel));
+        }
+
+        private static System.Collections.IEnumerator SellJobMessageRoutine(
+            string spawnLabel,
+            bool isVehicle,
+            string dropoffLabel
+        )
+        {
+            // First text: where the shipment is, and what form it is in
+            string[] crateLines =
+            {
+        $"Shipment's sitting in a crate {spawnLabel}.",
+        $"Crate's prepped {spawnLabel}. Go pick it up.",
+        $"Your load's packed into a crate {spawnLabel}.",
+        $"Crate is staged {spawnLabel}. Move it when you're ready.",
+        $"Product's boxed up in a crate {spawnLabel}."
+    };
+
+            string[] vehicleLines =
+            {
+        $"Delivery car is waiting {spawnLabel}.",
+        $"Vehicle's staged {spawnLabel}. Keys are in it.",
+        $"Your load's already loaded into a vehicle {spawnLabel}.",
+        $"Ride is parked {spawnLabel}. That's your delivery car.",
+        $"Vehicle with the product is sitting {spawnLabel}."
+    };
+
+            string first;
+            if (isVehicle)
+            {
+                int i = UnityEngine.Random.Range(0, vehicleLines.Length);
+                first = vehicleLines[i];
+            }
+            else
+            {
+                int i = UnityEngine.Random.Range(0, crateLines.Length);
+                first = crateLines[i];
+            }
+
+            Instance.SendTextMessage(first);
+
+            // 6–8 second delay before the second text
+            float delay = UnityEngine.Random.Range(6f, 8f);
+            yield return new UnityEngine.WaitForSeconds(delay);
+
+            // Second text: buyer confirmed, tell them to deliver to dropoff
+            string[] dropoffLines =
+            {
+        $"Buyer just confirmed the location. Deliver it to {dropoffLabel}.",
+        $"All right, buyer's locked in on the location. Get it to {dropoffLabel}.",
+        $"Route's live. Take the shipment over to {dropoffLabel}.",
+        $"Buyer signed off on the spot. Run it to {dropoffLabel}.",
+        $"Drop is green-lit. Deliver the load to {dropoffLabel}."
+    };
+
+            int d = UnityEngine.Random.Range(0, dropoffLines.Length);
+            Instance.SendTextMessage(dropoffLines[d]);
+        }
 
         public static void NotifySellReport(float stockSold, float payout, string destinationName)
         {

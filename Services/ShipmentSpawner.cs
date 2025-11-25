@@ -29,21 +29,40 @@ namespace WeaponShipments.Services
         private static GameObject _sellCrateObject;
         private static string _sellVehiclePrefabName;
 
-
         private static readonly Vector3 SellSpawnPosition = new Vector3(40f, 0.8f, 74f);
         private static readonly Quaternion SellSpawnRotation = Quaternion.Euler(0f, 270f, 0f);
 
-        private static readonly Vector3 SellDeliveryPosition = FallbackDeliveryPosition;
-        private static readonly Vector3 SellDeliverySize = DefaultDeliverySize;
-        private static readonly Quaternion SellDeliveryRotation = DefaultRotation;
+        private static readonly Vector3 SellDeliveryPosition =
+            new Vector3(-18.1277f, -4.1731f, 173.5805f);
+        private static readonly Vector3 SellDeliverySize =
+            new Vector3(9f, 3f, 8f);
+        private static readonly Quaternion SellDeliveryRotation =
+            Quaternion.Euler(0f, 0f, 0f);
+
+        private static readonly Vector3 SellDeliveryPosition_Chemical =
+            new Vector3(-110.4244f, -2.7369f, 97.7555f);
+
+        private static readonly Vector3 SellDeliverySize_Chemical =
+            new Vector3(3.5f, 3f, 5f);
+
+        private static readonly Quaternion SellDeliveryRotation_Chemical =
+            Quaternion.Euler(0f, 0f, 0f);
+
+        // Black Market as a delivery-only dropoff
+        private static readonly Vector3 SellDeliveryPosition_BlackMarket =
+            new Vector3(-60.9603f, -0.9796f, 35.7872f);
+
+        private static readonly Vector3 SellDeliverySize_BlackMarket =
+            new Vector3(4f, 3f, 2.5f);
+
+        private static readonly Quaternion SellDeliveryRotation_BlackMarket =
+            Quaternion.Euler(0f, 0f, 0f);
 
         private const string SellVehicleCode = "Cheetah"; // API vehicle code
         private const string SellVehiclePrefabName = "Coupe"; // actual ingame prefab name
 
         private static readonly Vector3 FallbackSpawnPosition = new Vector3(0f, 0f, 0f);
         private static readonly Quaternion FallbackSpawnRotation = Quaternion.identity;
-
-
 
         private struct SpawnPoint
         {
@@ -61,7 +80,7 @@ namespace WeaponShipments.Services
             {"RV", new SpawnPoint(new Vector3(17f,1.5f,-79f), Quaternion.Euler(0f,180f,0f))},
             {"Gazebo", new SpawnPoint(new Vector3(83f,6f,-125f), Quaternion.Euler(0f,90f,0f))},
             {"Sewer Market", new SpawnPoint(new Vector3(72.75f,-4.5f,34.65f), Quaternion.Euler(0f,65f,0f))},
-            {"Black Market", new SpawnPoint(new Vector3(-56.0084f,-1.9f,23.1473f), Quaternion.Euler(0f,0f,0f))},
+            {"Black Market", new SpawnPoint(new Vector3(-63.8475f,-1.135f,23.1473f), Quaternion.Euler(0f,0f,0f))},
         };
 
         private static SpawnPoint GetSpawnPointForOrigin(string origin)
@@ -70,6 +89,93 @@ namespace WeaponShipments.Services
                 return sp;
             return new SpawnPoint(FallbackSpawnPosition, FallbackSpawnRotation);
         }
+
+        private struct SellSpawnPoint
+        {
+            public Vector3 Position;
+            public Quaternion Rotation;
+            public string Label;
+
+            public SellSpawnPoint(Vector3 pos, Quaternion rot, string label)
+            {
+                Position = pos;
+                Rotation = rot;
+                Label = label;
+            }
+        }
+
+        private static readonly SellSpawnPoint[] SellSpawnPoints =
+        {
+            new SellSpawnPoint(
+                new Vector3(40f, 0.8f, 74f),
+                Quaternion.Euler(0f, 270f, 0f),
+                "next to the Crimson Canary"
+            ),
+
+            new SellSpawnPoint(
+                new Vector3(73.2514f, 0.85f, 33.9687f),
+                Quaternion.Euler(0f, 90f, 0f),
+                "behind the bank"
+            ),
+
+            new SellSpawnPoint(
+                new Vector3(124.5079f, 0.85f, 31.2666f),
+                Quaternion.Euler(0f, 180f, 0f),
+                "behind Handy Hank's"
+            ),
+
+            new SellSpawnPoint(
+                new Vector3(25.2742f, 1.1f, -79.7621f),
+                Quaternion.Euler(9.06f, 290f, 10f),
+                "near the RV"
+            ),
+
+            new SellSpawnPoint(
+                new Vector3(158.1861f, 4.8f, -110.7269f),
+                Quaternion.Euler(0f, 0f, 0f),
+                "near the Manor"
+            ),
+        };
+
+        // A single possible sell dropoff location
+        private struct SellDropoff
+        {
+            public Vector3 Position;
+            public Vector3 Size;
+            public Quaternion Rotation;
+            public string Label;
+
+            public SellDropoff(Vector3 pos, Vector3 size, Quaternion rot, string label)
+            {
+                Position = pos;
+                Size = size;
+                Rotation = rot;
+                Label = label;
+            }
+        }
+
+        // All possible sell job dropoffs (randomly chosen per job)
+        private static readonly SellDropoff[] SellDropoffs =
+        {
+            new SellDropoff(
+                SellDeliveryPosition,
+                SellDeliverySize,
+                SellDeliveryRotation,
+                "the North Warehouse"
+            ),
+            new SellDropoff(
+                SellDeliveryPosition_Chemical,
+                SellDeliverySize_Chemical,
+                SellDeliveryRotation_Chemical,
+                "the Chemical Company"
+            ),
+            new SellDropoff(
+                SellDeliveryPosition_BlackMarket,
+                SellDeliverySize_BlackMarket,
+                SellDeliveryRotation_BlackMarket,
+                "the Black Market"
+            ),
+        };
 
         public static void SpawnShipmentCrate(ShipmentManager.ShipmentEntry shipment)
         {
@@ -94,6 +200,12 @@ namespace WeaponShipments.Services
 
             RenameChildCubeToWeaponShipment(clone.transform);
             ApplyQuantityScale(clone.transform, shipment.Quantity);
+
+            // -------------------------------
+            //  ADD PROXIMITY DETECTOR HERE
+            // -------------------------------
+            var detector = clone.AddComponent<ShipmentProximityDetector>();
+            detector.Init(shipment.Id, shipment.Destination);
         }
 
         private static void RenameChildCubeToWeaponShipment(Transform root)
@@ -135,7 +247,14 @@ namespace WeaponShipments.Services
             return new DeliveryZone(FallbackDeliveryPosition, DefaultDeliverySize, DefaultRotation);
         }
 
-        private static void SpawnSellVehicleJob(float stockAmount, float payout, string vehicleCode, string prefabName)
+        private static void SpawnSellVehicleJob(
+            float stockAmount,
+            float payout,
+            string vehicleCode,
+            string prefabName,
+            Vector3 spawnPosition,
+            Quaternion spawnRotation
+        )
         {
             _sellVehiclePrefabName = prefabName;
 
@@ -147,12 +266,12 @@ namespace WeaponShipments.Services
                 return;
             }
 
-            vehicle.Color = VehicleColor.DullRed;
+            vehicle.Color = VehicleColor.Black;
             vehicle.IsPlayerOwned = true; // drive it during the job
 
-            vehicle.Spawn(SellSpawnPosition, SellSpawnRotation);
+            vehicle.Spawn(spawnPosition, spawnRotation);
 
-            // Find the spawned vehicle closest to the spawn point and treat that as the delivery car
+            // Find the spawned vehicle closest to this spawn point and treat that as the delivery car
             _sellVehicleObject = null;
             float bestDistSq = float.MaxValue;
 
@@ -162,7 +281,7 @@ namespace WeaponShipments.Services
                     continue;
 
                 GameObject root = go.transform.root != null ? go.transform.root.gameObject : go;
-                float distSq = (root.transform.position - SellSpawnPosition).sqrMagnitude;
+                float distSq = (root.transform.position - spawnPosition).sqrMagnitude;
                 if (distSq < bestDistSq)
                 {
                     bestDistSq = distSq;
@@ -180,8 +299,6 @@ namespace WeaponShipments.Services
                 MelonLogger.Warning("[ShipmentSpawner] Could not find spawned " + prefabName + " to mark as delivery car.");
             }
 
-            SpawnSellDeliveryArea(stockAmount, payout);
-
             MelonLogger.Msg(
                 "[ShipmentSpawner] Sell job started with vehicle {0} ({1}) for {2} stock -> ${3:N0}.",
                 vehicleCode,
@@ -191,7 +308,7 @@ namespace WeaponShipments.Services
             );
         }
 
-        private static void SpawnSellCrateJob(float stockAmount, float payout)
+        private static void SpawnSellCrateJob(float stockAmount, float payout, Vector3 spawnPosition, Quaternion spawnRotation)
         {
             // Reuse the Wood Crate Prop like other shipments
             if (_templateCrate == null)
@@ -207,15 +324,13 @@ namespace WeaponShipments.Services
 
             var clone = Object.Instantiate(_templateCrate);
             clone.name = "SellShipment";
-            clone.transform.position = SellSpawnPosition;
-            clone.transform.rotation = SellSpawnRotation;
+            clone.transform.position = spawnPosition;
+            clone.transform.rotation = spawnRotation;
 
             // Just reuse the scale logic if you like
             ApplyQuantityScale(clone.transform, 1);
 
             _sellCrateObject = clone;
-
-            SpawnSellDeliveryArea(stockAmount, payout);
 
             MelonLogger.Msg(
                 "[ShipmentSpawner] Sell job started with crate for {0} stock -> ${1:N0}.",
@@ -224,24 +339,33 @@ namespace WeaponShipments.Services
             );
         }
 
-        private static void SpawnSellDeliveryArea(float stockAmount, float payout)
+        // Creates the sell delivery trigger + visible lime cube,
+        // and returns the chosen dropoff name for Agent 28.
+        private static string SpawnSellDeliveryArea(float stockAmount, float payout)
         {
-            _sellArea = new GameObject("SellDeliveryArea_HylandPoint");
-            _sellArea.transform.position = SellDeliveryPosition;
-            _sellArea.transform.rotation = SellDeliveryRotation;
+            var go = new GameObject("SellDeliveryArea");
 
-            var box = _sellArea.AddComponent<BoxCollider>();
+            // Random dropoff (North Warehouse / Chemical Company / Black Market)
+            int idx = UnityEngine.Random.Range(0, SellDropoffs.Length);
+            SellDropoff d = SellDropoffs[idx];
+
+            go.transform.position = d.Position;
+            go.transform.rotation = d.Rotation;
+
+            var box = go.AddComponent<BoxCollider>();
             box.isTrigger = true;
-            box.size = SellDeliverySize;
+            box.size = d.Size;
 
-            var rb = _sellArea.AddComponent<Rigidbody>();
+            var rb = go.AddComponent<Rigidbody>();
             rb.isKinematic = true;
             rb.useGravity = false;
 
-            var trigger = _sellArea.AddComponent<SellDeliveryAreaTrigger>();
-            trigger.Init(stockAmount, payout);
+            go.AddComponent<SellDeliveryAreaTrigger>().Init(stockAmount, payout);
 
-            CreateLimeGreenCube(_sellArea.transform, SellDeliverySize);
+            // Visible helper, same look as shipment delivery zones
+            CreateLimeGreenCube(go.transform, d.Size);
+
+            return d.Label;
         }
 
         public static void SpawnDeliveryArea(string shipmentId)
@@ -292,25 +416,39 @@ namespace WeaponShipments.Services
             _sellCrateObject = null;
             _sellVehiclePrefabName = null;
 
+            // Pick a random sell spawn
+            int idx = UnityEngine.Random.Range(0, SellSpawnPoints.Length);
+            SellSpawnPoint sp = SellSpawnPoints[idx];
+
+            bool isVehicleJob;
+
             // -------------------------
             // DELIVERY TIERS
             // -------------------------
             if (stockAmount <= 5.26f)
             {
-                SpawnSellCrateJob(stockAmount, payout);
+                isVehicleJob = false;
+                SpawnSellCrateJob(stockAmount, payout, sp.Position, sp.Rotation);
             }
             else if (stockAmount <= 21.01f)
             {
-                SpawnSellVehicleJob(stockAmount, payout, vehicleCode: "Shitbox", prefabName: "Shitbox");
+                isVehicleJob = true;
+                SpawnSellVehicleJob(stockAmount, payout, vehicleCode: "Shitbox", prefabName: "Shitbox", spawnPosition: sp.Position, spawnRotation: sp.Rotation);
             }
             else if (stockAmount <= 63.01f)
             {
-                SpawnSellVehicleJob(stockAmount, payout, vehicleCode: "Bruiser", prefabName: "SUV");
+                isVehicleJob = true;
+                SpawnSellVehicleJob(stockAmount, payout, vehicleCode: "Bruiser", prefabName: "SUV", spawnPosition: sp.Position, spawnRotation: sp.Rotation);
             }
             else
             {
-                SpawnSellVehicleJob(stockAmount, payout, vehicleCode: "Veeper", prefabName: "Van");
+                isVehicleJob = true;
+                SpawnSellVehicleJob(stockAmount, payout, vehicleCode: "Veeper", prefabName: "Van", spawnPosition: sp.Position, spawnRotation: sp.Rotation);
             }
+
+            // Create delivery area and get the selected dropoff name
+            string chosenDropoff = SpawnSellDeliveryArea(stockAmount, payout);
+            Agent28.NotifySellJobStart(sp.Label, isVehicleJob, chosenDropoff);
         }
 
         public class SellDeliveryAreaTrigger : MonoBehaviour
@@ -323,7 +461,6 @@ namespace WeaponShipments.Services
                 _stockAmount = stock;
                 _payout = payout;
             }
-
             private void OnTriggerEnter(Collider other)
             {
                 if (other == null) return;
@@ -387,11 +524,24 @@ namespace WeaponShipments.Services
                     _payout
                 );
 
+                // Remove the crate immediately (if this was a crate job)
+                if (_sellCrateObject != null)
+                {
+                    Object.Destroy(_sellCrateObject);
+                    _sellCrateObject = null;
+                }
+
+                // Remove the vehicle after 60 seconds (if this was a vehicle job)
+                if (_sellVehicleObject != null)
+                {
+                    Object.Destroy(_sellVehicleObject, 180f);
+                    _sellVehicleObject = null;
+                }
+
+                // Remove the delivery trigger/area right away
                 Object.Destroy(this.gameObject);
 
                 _sellJobActive = false;
-                _sellVehicleObject = null;
-                _sellCrateObject = null;
                 _sellArea = null;
 
                 WeaponShipmentApp.Instance?.UpdateBars();
@@ -461,7 +611,6 @@ namespace WeaponShipments.Services
                     BusinessState.Supplies,
                     true   // fromShipment = true
                 );
-
 
                 ShipmentManager.Instance.RemoveShipment(_shipmentId);
 
