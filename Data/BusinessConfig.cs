@@ -43,5 +43,15 @@ namespace WeaponShipments.Data
 
         public static int SecurityUpgradePrice => WeaponShipmentsPrefs.SecurityUpgradePrice.Value;
         public static float SecurityRaidChanceMultiplier => WeaponShipmentsPrefs.SecurityRaidChanceMultiplier.Value;
+
+        // ---------------- BUY BUST CONFIG ----------------
+
+        public static float BuyBustTier1MaxEarnings => WeaponShipmentsPrefs.BuyBustTier1MaxEarnings.Value;
+        public static float BuyBustTier2MaxEarnings => WeaponShipmentsPrefs.BuyBustTier2MaxEarnings.Value;
+
+        public static float BuyBustChanceTier1 => WeaponShipmentsPrefs.BuyBustChanceTier1.Value;
+        public static float BuyBustChanceTier2 => WeaponShipmentsPrefs.BuyBustChanceTier2.Value;
+        public static float BuyBustChanceTier3 => WeaponShipmentsPrefs.BuyBustChanceTier3.Value;
+
     }
 }

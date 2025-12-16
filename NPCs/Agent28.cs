@@ -1,6 +1,7 @@
 ﻿using MelonLoader;
 using S1API.Economy;
 using S1API.Entities;
+using S1API.Entities.NPCs.Northtown;
 using S1API.Entities.NPCs.Westville;
 using S1API.Entities.Schedule;
 using S1API.GameTime;
@@ -326,31 +327,32 @@ namespace WeaponShipments.NPCs
                 .EnsureCustomer()
                 .WithCustomerDefaults(cd =>
                 {
-                    cd.WithSpending(minWeekly: 0f, maxWeekly: 1f)
-                        .WithOrdersPerWeek(0, 0)
-                        .WithPreferredOrderDay(Day.Thursday)
-                        .WithOrderTime(0530)
-                        .WithStandards(CustomerStandard.Moderate)
+                    cd.WithSpending(minWeekly: 500f, maxWeekly: 1500f)
+                        .WithOrdersPerWeek(2, 4)
+                        .WithPreferredOrderDay(Day.Saturday)
+                        .WithOrderTime(1100)
+                        .WithStandards(CustomerStandard.High)
                         .AllowDirectApproach(true)
-                        .GuaranteeFirstSample(false)
+                        .GuaranteeFirstSample(true)
                         .WithMutualRelationRequirement(minAt50: 2.5f, maxAt100: 4.0f)
                         .WithCallPoliceChance(0.15f)
-                        .WithDependence(baseAddiction: 0.25f, dependenceMultiplier: 1.0f)
+                        .WithDependence(baseAddiction: 0.25f, dependenceMultiplier: 1.1f)
                         .WithAffinities(new[]
                         {
-                            (DrugType.Marijuana, 0.52f), (DrugType.Methamphetamine, 0.73f), (DrugType.Cocaine, 0.14f)
+                            (DrugType.Marijuana, 0.65f), (DrugType.Cocaine, -0.3f)
                         })
-                        .WithPreferredProperties(Property.AntiGravity, Property.Spicy, Property.CalorieDense);
+                        // .WithPreferredPropertiesById("Munchies", "Energizing", "Cyclopean");
+                        .WithPreferredProperties(Property.Munchies, Property.AntiGravity, Property.BrightEyed);
                 })
                 .WithRelationshipDefaults(r =>
                 {
-                    r.WithDelta(4.0f)
+                    r.WithDelta(5.0f)
                         .SetUnlocked(false)
-                        .SetUnlockType(NPCRelationship.UnlockType.DirectApproach)
-                        .WithConnectionsById();
+                        .SetUnlockType(NPCRelationship.UnlockType.DirectApproach);
                 })
                 .WithSchedule(plan =>
                 {
+                    plan.WalkTo(spawnPos, 900, faceDestinationDir: true);
                 });
         }
 
@@ -362,68 +364,13 @@ namespace WeaponShipments.NPCs
         {
             try
             {
+                Instance = this;
+
                 base.OnCreated();
                 Appearance.Build();
 
-                Instance = this;
-
-                Dialogue.BuildAndSetDatabase(db => {
-                    db.WithModuleEntry("Reactions", "GREETING", "Welcome.");
-                });
-                Dialogue.BuildAndRegisterContainer("AlexShop", c => {
-                    c.AddNode("ENTRY", "What do you want?", ch => {
-                        ch.Add("PAY_FOR_INFO", "I want to start smuggling weapons.", "INFO_NODE")
-                            .Add("NO_THANKS", "Nothing.", "EXIT");
-                    });
-                    c.AddNode("INFO_NODE", "I sent you the app", ch => {
-                        ch.Add("BYE", "Thanks", "EXIT");
-                    });
-                    c.AddNode("NOT_ENOUGH", "Who are you?", ch => {
-                        ch.Add("BACK", "I'll come back.", "ENTRY");
-                    });
-                    c.AddNode("EXIT", "See you.");
-                });
-
-                Dialogue.OnChoiceSelected("PAY_FOR_INFO", () =>
-                {
-                    var fr = LevelManager.CurrentRank;   // FullRank
-
-                    MelonLogger.Msg($"[RankCheck] Rank = {fr.Rank}, Tier = {fr.Tier}");
-
-                    const Rank RequiredRank = Rank.Hoodlum;
-
-                    bool pass = fr.Rank >= RequiredRank;
-
-                    MelonLogger.Msg($"[RankCheck] Required = {RequiredRank}, Pass = {pass}");
-
-                    if (pass)
-                    {
-                        MelonLogger.Msg("[RankCheck] JUMP -> INFO_NODE");
-                        Dialogue.JumpTo("RankCheck", "INFO_NODE");
-                    }
-                    else
-                    {
-                        MelonLogger.Msg("[RankCheck] JUMP -> NOT_ENOUGH");
-                        Dialogue.JumpTo("RankCheck", "NOT_ENOUGH");
-                    }
-                });
-
-
-                Dialogue.OnNodeDisplayed("INFO_NODE", () => {
-                    // Ran when "Get scammed nerd." is shown
-                });
-
-                Dialogue.OnChoiceSelected("BYE", () =>
-                {
-                    Dialogue.StopOverride();
-                    SendTextMessage("You got scammed");
-                });
-
-                Dialogue.UseContainerOnInteract("AlexShop");
-                Aggressiveness = 3f;
+                Aggressiveness = 1f;
                 Region = Region.Northtown;
-
-                // Customer.RequestProduct();
 
                 Schedule.Enable();
             }

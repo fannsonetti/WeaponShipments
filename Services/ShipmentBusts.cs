@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using MelonLoader;
 using S1API.Entities;
+using S1API.Law;
 using UnityEngine;
 using UnityEngine.AI;
-using ScheduleOne.PlayerScripts; // PlayerCrimeData
 using WeaponShipments.Data;      // BusinessState
 using WeaponShipments.Services;  // ShipmentManager
 
@@ -44,9 +44,25 @@ namespace WeaponShipments.NPCs
                 }
             };
 
+        public static void TriggerBuyBust()
+        {
+            var player = Player.Local;
+            if (player == null)
+            {
+                MelonLogger.Warning("[ShipmentBusts] No local player; cannot trigger buy bust.");
+                return;
+            }
+
+            // Buy busts: light escalation + proper dispatch via S1API
+            LawManager.SetWantedLevel(player, PursuitLevel.Investigating);
+            LawManager.CallPolice(player);
+
+            MelonLogger.Msg("[ShipmentBusts] Buy bust triggered (paid resupply delivery).");
+        }
+
         public static void TryTriggerBust(string shipmentId, Vector3 cratePosition)
         {
-            var player = S1API.Entities.Player.Local;
+            var player = Player.Local;
             if (player == null)
             {
                 MelonLogger.Warning("[ShipmentBusts] No local S1API player; cannot trigger bust.");
@@ -81,26 +97,26 @@ namespace WeaponShipments.NPCs
 
             int minCops;
             int maxCops;
-            PlayerCrimeData.EPursuitLevel targetPursuitLevel;
+            PursuitLevel targetPursuitLevel;
             float bustChance; // 0–1
 
             if (earnings < 25000f)
             {
-                targetPursuitLevel = PlayerCrimeData.EPursuitLevel.NonLethal;
+                targetPursuitLevel = PursuitLevel.NonLethal;
                 minCops = 2;
                 maxCops = 3;
                 bustChance = 0.05f;
             }
             else if (earnings < 100000f)
             {
-                targetPursuitLevel = PlayerCrimeData.EPursuitLevel.Lethal;
+                targetPursuitLevel = PursuitLevel.Lethal;
                 minCops = 2;
                 maxCops = 4;
                 bustChance = 0.10f;
             }
             else
             {
-                targetPursuitLevel = PlayerCrimeData.EPursuitLevel.Lethal;
+                targetPursuitLevel = PursuitLevel.Lethal;
                 minCops = 4;
                 maxCops = 7;
                 bustChance = 0.15f;
@@ -114,17 +130,16 @@ namespace WeaponShipments.NPCs
                 return;
             }
 
-            // Apply pursuit level
-            var crimeData = FindLocalPlayerCrimeData();
-            if (crimeData != null)
-            {
-                crimeData.SetPursuitLevel(targetPursuitLevel);
-                MelonLogger.Msg($"[ShipmentBusts] Set pursuit level to {targetPursuitLevel} (earnings={earnings}).");
-            }
-            else
-            {
-                MelonLogger.Warning("[ShipmentBusts] Could not find PlayerCrimeData; pursuit level not set.");
-            }
+            // Apply wanted level via S1API LawManager
+            // Docs: LawManager.SetWantedLevel(Player target, PursuitLevel level) :contentReference[oaicite:2]{index=2}
+            LawManager.SetWantedLevel(player, targetPursuitLevel);
+
+            MelonLogger.Msg($"[ShipmentBusts] Set wanted level to {targetPursuitLevel} (earnings={earnings}).");
+
+            // Optional: dispatch additional police from nearest station (commented out to avoid double-spawn
+            // if you're already teleporting existing officers).
+            // Docs: LawManager.CallPolice(Player target) :contentReference[oaicite:3]{index=3}
+            // LawManager.CallPolice(player);
 
             // Find all officer gameobjects
             List<GameObject> officers = FindAllOfficers();
@@ -176,26 +191,6 @@ namespace WeaponShipments.NPCs
             }
 
             MelonLogger.Msg($"[ShipmentBusts] Spawned {numToSpawn} officers (desired {desired}) for earnings={earnings}.");
-        }
-
-        private static PlayerCrimeData FindLocalPlayerCrimeData()
-        {
-            var allCrimeData = UnityEngine.Object.FindObjectsOfType<PlayerCrimeData>();
-            if (allCrimeData == null || allCrimeData.Length == 0)
-                return null;
-
-            // Prefer the one owned by the local client
-            foreach (var cd in allCrimeData)
-            {
-                if (cd == null || cd.Player == null || cd.Player.Owner == null)
-                    continue;
-
-                if (cd.Player.Owner.IsLocalClient)
-                    return cd;
-            }
-
-            // Fallback: first one
-            return allCrimeData[0];
         }
 
         /// <summary>

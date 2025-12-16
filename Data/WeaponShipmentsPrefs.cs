@@ -40,6 +40,14 @@ namespace WeaponShipments.Data
         public static MelonPreferences_Entry<int> SecurityUpgradePrice;
         public static MelonPreferences_Entry<float> SecurityRaidChanceMultiplier;
 
+        // ---------------- BUY BUST CONFIG ----------------
+        public static MelonPreferences_Entry<float> BuyBustTier1MaxEarnings;
+        public static MelonPreferences_Entry<float> BuyBustTier2MaxEarnings;
+
+        public static MelonPreferences_Entry<float> BuyBustChanceTier1;
+        public static MelonPreferences_Entry<float> BuyBustChanceTier2;
+        public static MelonPreferences_Entry<float> BuyBustChanceTier3;
+
 
         // STATIC CONSTRUCTOR
         static WeaponShipmentsPrefs()
@@ -201,6 +209,43 @@ namespace WeaponShipments.Data
                 "Security Raid Chance Multiplier",
                 "Raid change from Security upgrade (0.25 = -75%)."
             );
+
+            // ---------------- BUY BUST CONFIG ----------------
+            BuyBustTier1MaxEarnings = _category.CreateEntry(
+                "BuyBustTier1MaxEarnings",
+                25000f,
+                "Buy Bust Tier 1 Max Earnings",
+                "Tier 1 applies when TotalEarnings <= this value."
+            );
+
+            BuyBustTier2MaxEarnings = _category.CreateEntry(
+                "BuyBustTier2MaxEarnings",
+                100000f,
+                "Buy Bust Tier 2 Max Earnings",
+                "Tier 2 applies when TotalEarnings is between Tier1Max and this value. Tier 3 is above this."
+            );
+
+            BuyBustChanceTier1 = _category.CreateEntry(
+                "BuyBustChanceTier1",
+                0.05f,
+                "Buy Bust Chance (Tier 1)",
+                "Chance (0–1) that a purchased supplies delivery triggers a bust in Tier 1."
+            );
+
+            BuyBustChanceTier2 = _category.CreateEntry(
+                "BuyBustChanceTier2",
+                0.1f,
+                "Buy Bust Chance (Tier 2)",
+                "Chance (0–1) that a purchased supplies delivery triggers a bust in Tier 2."
+            );
+
+            BuyBustChanceTier3 = _category.CreateEntry(
+                "BuyBustChanceTier3",
+                0.15f,
+                "Buy Bust Chance (Tier 3)",
+                "Chance (0–1) that a purchased supplies delivery triggers a bust in Tier 3."
+            );
+
         }
     }
 }

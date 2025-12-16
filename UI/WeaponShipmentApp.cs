@@ -389,6 +389,14 @@ namespace WeaponShipments.UI
                         // Mark resupply complete for stats
                         BusinessState.RegisterResupplyJobCompleted();
 
+
+                        // Roll chance for a "buy bust" on paid deliveries (tiered by TotalEarnings).
+                        float buyBustChance = GetBuyBustChanceForEarnings(BusinessState.TotalEarnings);
+                        if (UnityEngine.Random.value < buyBustChance)
+                        {
+                            ShipmentBusts.TriggerBuyBust();
+                        }
+
                         // Notify Agent 28 that a shipment (not instant buy) arrived
                         Agent28.NotifySuppliesArrived(
                             (int)added,
@@ -406,6 +414,32 @@ namespace WeaponShipments.UI
                 yield return null;
             }
         }
+
+        // ---------------- BUY BUST (PAID RESUPPLY) ----------------
+
+        private static float GetBuyBustChanceForEarnings(float totalEarnings)
+        {
+            // These values are expected to come from MelonPreferences via BusinessConfig.
+            // Defensive ordering: allow Tier2Max < Tier1Max without breaking tier selection.
+            float t1 = BusinessConfig.BuyBustTier1MaxEarnings;
+            float t2 = BusinessConfig.BuyBustTier2MaxEarnings;
+
+            if (t2 < t1)
+            {
+                float tmp = t1;
+                t1 = t2;
+                t2 = tmp;
+            }
+
+            if (totalEarnings <= t1)
+                return Mathf.Clamp01(BusinessConfig.BuyBustChanceTier1);
+
+            if (totalEarnings <= t2)
+                return Mathf.Clamp01(BusinessConfig.BuyBustChanceTier2);
+
+            return Mathf.Clamp01(BusinessConfig.BuyBustChanceTier3);
+        }
+
 
         private static IEnumerator DelayedDropoffPhase(string shipmentId, string dropoffLocation)
         {
