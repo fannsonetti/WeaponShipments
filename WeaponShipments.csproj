@@ -208,9 +208,7 @@
 		<Compile Include="Logic\SellCalculator.cs" />
 		<Compile Include="Logic\StockConverter.cs" />
 		<Compile Include="NPCs\Agent28.cs" />
-		<Compile Include="Services\AssetBundleLoader.cs" />
-		<Compile Include="Services\BunkerRoofController.cs" />
-		<Compile Include="Services\BunkerTeleportTrigger.cs" />
+		<Compile Include="Models\AssetBundleLoader.cs" />
 		<Compile Include="Services\ShipmentBusts.cs" />
 		<Compile Include="Services\ShipmentProximityDetector.cs" />
 		<Compile Include="Services\ShipmentSpawner.cs" />
@@ -222,7 +220,7 @@
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\*.png" />
 		<EmbeddedResource Include="bunker" />
-		<EmbeddedResource Include="bunkerproperty" />
+		<EmbeddedResource Include="warehouse" />
 	</ItemGroup>
 	<!-- S1API.Forked Reference: NuGet Package (default) -->
 

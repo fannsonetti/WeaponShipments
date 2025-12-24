@@ -47,8 +47,7 @@ namespace WeaponShipments
                 _bunkerRequested = true;
 
                 MelonLogger.Msg("[WeaponShipments] Main scene detected; loading bunker (embedded bundle)...");
-                AssetBundleLoader.LoadBunkerAdditiveOnce(); // ADDED: calls your embedded resource loader
-                AssetBundleLoader.LoadBunkerPropertyOnce();
+                AssetBundleLoader.LoadWarehouseAdditiveOnce(); // ADDED: calls your embedded resource loader
             }
         }
 
