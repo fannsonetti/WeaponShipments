@@ -13,6 +13,7 @@ namespace WeaponShipments.Logic
         {
             if (_running) return;
             _running = true;
+
             MelonCoroutines.Start(ConversionLoop());
         }
 
@@ -20,17 +21,19 @@ namespace WeaponShipments.Logic
         {
             while (true)
             {
-                // BEFORE:
-                // yield return new WaitForSeconds(BusinessConfig.ConversionInterval);
-
-                // AFTER: faster with upgrades
+                // Property-aware interval (Warehouse uses 240s via BusinessState/BusinessConfig routing,
+                // Bunker/Garage use pref interval and (for Bunker only) upgrades affect speed).
                 yield return new WaitForSeconds(BusinessState.GetEffectiveConversionInterval());
+
                 ConvertOneSupply();
             }
         }
 
         private static void ConvertOneSupply()
         {
+            // Note: BusinessState routes Supplies/Stock to the currently active property storage.
+            // Caps are enforced inside BusinessState (and/or via BusinessConfig.GetMax* calls there).
+
             float suppliesCost = 1f;
 
             if (!BusinessState.TryConsumeSupplies(suppliesCost))
@@ -46,4 +49,3 @@ namespace WeaponShipments.Logic
         }
     }
 }
-

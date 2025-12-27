@@ -10,6 +10,15 @@ namespace WeaponShipments.Data
         public static MelonPreferences_Entry<int> MaxSupplies;
         public static MelonPreferences_Entry<int> MaxStock;
 
+        // ---------------- PROPERTY LIMITS (NEW) ----------------
+        public static MelonPreferences_Entry<int> WarehouseMaxSupplies;
+        public static MelonPreferences_Entry<int> WarehouseMaxStock;
+        public static MelonPreferences_Entry<float> WarehouseConversionInterval;
+
+        public static MelonPreferences_Entry<int> GarageMaxSupplies;
+        public static MelonPreferences_Entry<int> GarageMaxStock;
+        public static MelonPreferences_Entry<float> GarageConversionInterval;
+
         // ---------------- BASE ECONOMY ----------------
         public static MelonPreferences_Entry<int> BuySuppliesPrice;
         public static MelonPreferences_Entry<float> BuySuppliesDeliveryDelay;
@@ -48,7 +57,6 @@ namespace WeaponShipments.Data
         public static MelonPreferences_Entry<float> BuyBustChanceTier2;
         public static MelonPreferences_Entry<float> BuyBustChanceTier3;
 
-
         // STATIC CONSTRUCTOR
         static WeaponShipmentsPrefs()
         {
@@ -62,14 +70,57 @@ namespace WeaponShipments.Data
                 "MaxSupplies",
                 40,
                 "Max Supplies",
-                "Maximum supplies storage."
+                "Maximum supplies storage (default / bunker)."
             );
 
             MaxStock = _category.CreateEntry(
                 "MaxStock",
                 100,
                 "Max Stock",
-                "Maximum stock storage."
+                "Maximum stock storage (default / bunker)."
+            );
+
+            // ---------------- PROPERTY LIMITS (NEW) ----------------
+            WarehouseMaxSupplies = _category.CreateEntry(
+                "WarehouseMaxSupplies",
+                5,
+                "Warehouse Max Supplies",
+                "Maximum supplies storage for Warehouse."
+            );
+
+            WarehouseMaxStock = _category.CreateEntry(
+                "WarehouseMaxStock",
+                10,
+                "Warehouse Max Stock",
+                "Maximum stock storage for Warehouse."
+            );
+
+            WarehouseConversionInterval = _category.CreateEntry(
+                "WarehouseConversionInterval",
+                240f,
+                "Warehouse Conversion Interval",
+                "Seconds between automatic supply-to-stock conversions for Warehouse."
+            );
+
+            GarageMaxSupplies = _category.CreateEntry(
+                "GarageMaxSupplies",
+                40,
+                "Garage Max Supplies",
+                "Maximum supplies storage for Garage."
+            );
+
+            GarageMaxStock = _category.CreateEntry(
+                "GarageMaxStock",
+                100,
+                "Garage Max Stock",
+                "Maximum stock storage for Garage."
+            );
+
+            GarageConversionInterval = _category.CreateEntry(
+                "GarageConversionInterval",
+                120f,
+                "Garage Conversion Interval",
+                "Seconds between automatic supply-to-stock conversions for Garage."
             );
 
             // ---------------- BASE ECONOMY ----------------
@@ -112,7 +163,7 @@ namespace WeaponShipments.Data
                 "ConversionInterval",
                 120f,
                 "Conversion Interval",
-                "Seconds between automatic supply-to-stock conversions."
+                "Seconds between automatic supply-to-stock conversions (default / bunker)."
             );
 
             // ---------------- RAID CONFIG ----------------
@@ -245,7 +296,6 @@ namespace WeaponShipments.Data
                 "Buy Bust Chance (Tier 3)",
                 "Chance (0–1) that a purchased supplies delivery triggers a bust in Tier 3."
             );
-
         }
     }
 }

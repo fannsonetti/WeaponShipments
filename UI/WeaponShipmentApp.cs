@@ -24,15 +24,6 @@ namespace WeaponShipments.UI
     {
         public static WeaponShipmentApp Instance { get; private set; }
 
-        public enum PropertyType
-        {
-            Warehouse,
-            Bunker
-        }
-
-        // Selected property for this session (can be persisted later via save data if desired)
-        public static PropertyType ActiveProperty { get; private set; } = PropertyType.Warehouse;
-
 
 
         private static bool _conversionRoutineStarted;
@@ -42,6 +33,9 @@ namespace WeaponShipments.UI
 
         private GameObject _loginPanel;
         private GameObject _propertySelectPanel;
+        private Transform _propertySelectCardsContainer;
+        private bool _hideCompromisedWarehouseInSelect;
+        private Text _propertySelectNoOwnedText;
         private GameObject _homePanel;
 
         private GameObject _homePage;
@@ -73,6 +67,15 @@ namespace WeaponShipments.UI
         // Sell button label refs so we can update the prices dynamically
         private Text _sellHylandLabel;
         private Text _sellSerenaLabel;
+
+        private Text _locationNameText;
+        private Text _locationValueText;
+
+        private GameObject _upgradesNavButtonGO;
+
+        // Home page owned properties container (rebuilt when ownership changes)
+        private Transform _ownedPropertiesContainer;
+        private readonly HashSet<BusinessState.PropertyType> _hiddenOwnedProperties = new();
 
         private bool _equipmentOwned;
         private bool _staffOwned;
@@ -197,7 +200,7 @@ namespace WeaponShipments.UI
                 new Color(0.05f, 0.05f, 0.05f, 1f) // dark grey, opaque
             );
             var topRT = topBar.GetComponent<RectTransform>();
-            topRT.anchorMin = new Vector2(0f, 0.65f);
+            topRT.anchorMin = new Vector2(0f, 0.72f);
             topRT.anchorMax = new Vector2(1f, 1f);
             topRT.offsetMin = Vector2.zero;
             topRT.offsetMax = Vector2.zero;
@@ -256,13 +259,13 @@ namespace WeaponShipments.UI
                 fullAnchor: true
             );
 
-            // Center cube
+            // Reverted cube sizing (your previous style)
             var cube = UIFactory.Panel(
                 "PropertySelectCube",
                 bg.transform,
                 new Color(0.08f, 0.08f, 0.08f),
-                new Vector2(0.3f, 0.3f),
-                new Vector2(0.7f, 0.7f)
+                new Vector2(0.25f, 0.2f),
+                new Vector2(0.75f, 0.8f)
             );
 
             // Top bar
@@ -272,7 +275,7 @@ namespace WeaponShipments.UI
                 new Color(0.05f, 0.05f, 0.05f, 1f)
             );
             var topRT = topBar.GetComponent<RectTransform>();
-            topRT.anchorMin = new Vector2(0f, 0.65f);
+            topRT.anchorMin = new Vector2(0f, 0.78f);
             topRT.anchorMax = new Vector2(1f, 1f);
             topRT.offsetMin = Vector2.zero;
             topRT.offsetMax = Vector2.zero;
@@ -286,8 +289,8 @@ namespace WeaponShipments.UI
                 new Color(0.7f, 0.05f, 0.05f, 1f)
             );
             var divRT = divider.GetComponent<RectTransform>();
-            divRT.anchorMin = new Vector2(0f, 0.63f);
-            divRT.anchorMax = new Vector2(1f, 0.65f);
+            divRT.anchorMin = new Vector2(0f, 0.76f);
+            divRT.anchorMax = new Vector2(1f, 0.78f);
             divRT.offsetMin = Vector2.zero;
             divRT.offsetMax = Vector2.zero;
 
@@ -301,58 +304,344 @@ namespace WeaponShipments.UI
             );
             title.color = Color.white;
             var titleRT = title.GetComponent<RectTransform>();
-            titleRT.anchorMin = new Vector2(0.05f, 0.47f);
-            titleRT.anchorMax = new Vector2(0.95f, 0.62f);
+            titleRT.anchorMin = new Vector2(0.05f, 0.70f);
+            titleRT.anchorMax = new Vector2(0.95f, 0.76f);
             titleRT.offsetMin = Vector2.zero;
             titleRT.offsetMax = Vector2.zero;
 
-            // Buttons row
-            var buttonRow = UIFactory.ButtonRow(
-                "PropertySelectButtonRow",
+            // Cards container
+            var cards = UIFactory.Panel(
+                "PropertySelectCards",
                 cube.transform,
-                spacing: 18,
-                alignment: TextAnchor.MiddleCenter
+                new Color(0, 0, 0, 0)
             );
-            var brt = buttonRow.GetComponent<RectTransform>();
-            brt.anchorMin = new Vector2(0f, 0.15f);
-            brt.anchorMax = new Vector2(1f, 0.40f);
-            brt.offsetMin = Vector2.zero;
-            brt.offsetMax = Vector2.zero;
+            var cardsRT = cards.GetComponent<RectTransform>();
 
-            // Warehouse
-            var (_, warehouseBtn, warehouseLabel) = UIFactory.RoundedButtonWithLabel(
-                "WarehouseButton",
-                "Warehouse",
-                buttonRow.transform,
-                new Color(0.8f, 0.1f, 0.1f),
-                220,
-                60,
-                20,
-                Color.white
-            );
-            if (warehouseLabel != null)
-                warehouseLabel.alignment = TextAnchor.MiddleCenter;
-            ButtonUtils.AddListener(warehouseBtn, () => OnPropertySelected(PropertyType.Warehouse));
+            // Keep the same band you had, but tighten slightly so children don't get excessive vertical stretch
+            cardsRT.anchorMin = new Vector2(0.05f, 0.14f);
+            cardsRT.anchorMax = new Vector2(0.95f, 0.68f);
+            cardsRT.offsetMin = Vector2.zero;
+            cardsRT.offsetMax = Vector2.zero;
 
-            // Bunker
-            var (_, bunkerBtn, bunkerLabel) = UIFactory.RoundedButtonWithLabel(
-                "BunkerButton",
-                "Bunker",
-                buttonRow.transform,
-                new Color(0.35f, 0.0f, 0.0f),
-                220,
-                60,
-                20,
-                Color.white
+            var h = cards.AddComponent<HorizontalLayoutGroup>();
+            h.spacing = 14f;
+            h.childAlignment = TextAnchor.MiddleCenter;
+
+            // Critical: don't stretch widths when a card is hidden
+            h.childControlWidth = false;
+            h.childForceExpandWidth = false;
+
+            // Let the band control height, but the card itself will set preferredHeight (next section)
+            h.childControlHeight = true;
+            h.childForceExpandHeight = true;
+
+            _propertySelectCardsContainer = cards.transform;
+
+            _propertySelectNoOwnedText = UIFactory.Text(
+                "PropertySelectNoOwnedText",
+                "NO PROPERTIES OWNED",
+                cube.transform,
+                16,
+                TextAnchor.MiddleCenter,
+                FontStyle.Bold
             );
-            if (bunkerLabel != null)
-                bunkerLabel.alignment = TextAnchor.MiddleCenter;
-            ButtonUtils.AddListener(bunkerBtn, () => OnPropertySelected(PropertyType.Bunker));
+            _propertySelectNoOwnedText.color = new Color(0.9f, 0.9f, 0.9f);
+            var noneRT = _propertySelectNoOwnedText.GetComponent<RectTransform>();
+            noneRT.anchorMin = new Vector2(0.05f, 0.02f);
+            noneRT.anchorMax = new Vector2(0.95f, 0.10f);
+            noneRT.offsetMin = Vector2.zero;
+            noneRT.offsetMax = Vector2.zero;
+
+            RefreshPropertySelectCards();
         }
 
-        private void OnPropertySelected(PropertyType property)
+        private void RefreshPropertySelectCards()
         {
-            ActiveProperty = property;
+            if (_propertySelectCardsContainer == null)
+                return;
+
+            // Clear existing
+            for (int i = _propertySelectCardsContainer.childCount - 1; i >= 0; i--)
+            {
+                var child = _propertySelectCardsContainer.GetChild(i);
+                if (child != null)
+                    UnityEngine.Object.Destroy(child.gameObject);
+            }
+
+            // Only show properties the player OWNS, in this order:
+            // Warehouse, Garage, Bunker
+            bool anyOwned = false;
+
+            // Warehouse (skip if hidden via X)
+            if (!_hideCompromisedWarehouseInSelect && IsPropertyOwned(BusinessState.PropertyType.Warehouse))
+            {
+                anyOwned = true;
+                CreatePropertyCard(
+                    _propertySelectCardsContainer,
+                    BusinessState.PropertyType.Warehouse,
+                    "Warehouse",
+                    LoadPropertyImage("warehouse.png"),
+                    allowResearch: false
+                );
+            }
+
+            // Garage
+            if (IsPropertyOwned(BusinessState.PropertyType.Garage))
+            {
+                anyOwned = true;
+                CreatePropertyCard(
+                    _propertySelectCardsContainer,
+                    BusinessState.PropertyType.Garage,
+                    "Garage",
+                    LoadPropertyImage("garage.png"),
+                    allowResearch: true
+                );
+            }
+
+            // Bunker
+            if (IsPropertyOwned(BusinessState.PropertyType.Bunker))
+            {
+                anyOwned = true;
+                CreatePropertyCard(
+                    _propertySelectCardsContainer,
+                    BusinessState.PropertyType.Bunker,
+                    "Bunker",
+                    LoadPropertyImage("bunker.png"),
+                    allowResearch: true
+                );
+            }
+
+            if (_propertySelectNoOwnedText != null)
+                _propertySelectNoOwnedText.gameObject.SetActive(!anyOwned);
+        }
+
+        private void CreatePropertyCard(
+            Transform parent,
+            BusinessState.PropertyType property,
+            string displayName,
+            Sprite sprite,
+            bool allowResearch
+        )
+        {
+            var card = UIFactory.Panel(
+                $"{displayName}Card",
+                parent,
+                new Color(0.02f, 0.02f, 0.02f)
+            );
+
+            var le = card.AddComponent<LayoutElement>();
+            // Fixed aspect/size so sibling cards do not stretch when one is hidden.
+            le.minWidth = 520f;
+            le.preferredWidth = 520f;
+            le.flexibleWidth = 0f;
+            le.preferredHeight = 330f;
+
+            // Image frame (box around image)
+            var imgFrame = UIFactory.Panel(
+                $"{displayName}ImageFrame",
+                card.transform,
+                new Color(0.05f, 0.05f, 0.05f)
+            );
+            var imgRT = imgFrame.GetComponent<RectTransform>();
+            imgRT.anchorMin = new Vector2(0.05f, 0.38f);
+            imgRT.anchorMax = new Vector2(0.95f, 0.98f);
+            imgRT.offsetMin = Vector2.zero;
+            imgRT.offsetMax = Vector2.zero;
+
+            var img = imgFrame.GetComponent<Image>();
+            if (img == null) img = imgFrame.AddComponent<Image>();
+
+            if (sprite != null)
+            {
+                img.sprite = sprite;
+                img.color = Color.white;
+                img.preserveAspect = true;
+            }
+            else
+            {
+                img.sprite = null;
+                img.color = new Color(0.15f, 0.15f, 0.15f);
+            }
+
+
+            // Compromised warehouse: show an "X" in the top-left of the image frame
+            // that hides the warehouse card for this session.
+            bool isCompromisedWarehouse = (property == BusinessState.PropertyType.Warehouse) && IsWarehouseCompromised();
+            if (isCompromisedWarehouse)
+            {
+                var xBtnGO = UIFactory.Panel(
+                    $"{displayName}HideX",
+                    imgFrame.transform,
+                    new Color(0.6f, 0.05f, 0.05f, 1f)
+                );
+                var xBtnRT = xBtnGO.GetComponent<RectTransform>();
+                xBtnRT.anchorMin = new Vector2(0f, 1f);
+                xBtnRT.anchorMax = new Vector2(0f, 1f);
+                xBtnRT.pivot = new Vector2(0f, 1f);
+                xBtnRT.sizeDelta = new Vector2(26f, 26f);
+                xBtnRT.anchoredPosition = new Vector2(6f, -6f);
+
+                var xImg = xBtnGO.GetComponent<Image>();
+                if (xImg == null) xImg = xBtnGO.AddComponent<Image>();
+                xImg.color = new Color(0.6f, 0.05f, 0.05f, 1f);
+
+                var xBtn = xBtnGO.AddComponent<Button>();
+                xBtn.targetGraphic = xImg;
+                ButtonUtils.AddListener(xBtn, () =>
+                {
+                    _hideCompromisedWarehouseInSelect = true;
+                    RefreshPropertySelectCards();
+                });
+
+                var xText = UIFactory.Text(
+                    $"{displayName}HideXText",
+                    "X",
+                    xBtnGO.transform,
+                    16,
+                    TextAnchor.MiddleCenter,
+                    FontStyle.Bold
+                );
+                xText.color = Color.white;
+                var xTextRT = xText.GetComponent<RectTransform>();
+                xTextRT.anchorMin = new Vector2(0f, 0f);
+                xTextRT.anchorMax = new Vector2(1f, 1f);
+                xTextRT.offsetMin = Vector2.zero;
+                xTextRT.offsetMax = Vector2.zero;
+            }
+
+            // Text below image
+            var label = UIFactory.Text(
+                $"{displayName}Label",
+                displayName.ToUpperInvariant(),
+                card.transform,
+                16,
+                TextAnchor.MiddleCenter,
+                FontStyle.Bold
+            );
+            label.color = Color.white;
+            var labelRT = label.GetComponent<RectTransform>();
+            labelRT.anchorMin = new Vector2(0.05f, 0.22f);
+            labelRT.anchorMax = new Vector2(0.95f, 0.38f);
+            labelRT.offsetMin = Vector2.zero;
+            labelRT.offsetMax = Vector2.zero;
+
+            // Manage button below text
+            var (btnGO, btn, btnText) = UIFactory.RoundedButtonWithLabel(
+                $"{displayName}ManageBtn",
+                "Manage",
+                card.transform,
+                new Color(0.35f, 0.0f, 0.0f),
+                0,
+                48,
+                18,
+                Color.white
+            );
+
+            var btnRT = btnGO.GetComponent<RectTransform>();
+            btnRT.anchorMin = new Vector2(0.10f, 0.05f);
+            btnRT.anchorMax = new Vector2(0.90f, 0.20f);
+            btnRT.offsetMin = Vector2.zero;
+            btnRT.offsetMax = Vector2.zero;
+
+
+            bool owned = IsPropertyOwned(property);
+            bool compromised = (property == BusinessState.PropertyType.Warehouse) && IsWarehouseCompromised();
+
+            if (!owned)
+            {
+                btn.interactable = false;
+                if (btnText != null) btnText.text = "Not Owned";
+            }
+            else if (compromised)
+            {
+                btn.interactable = false;
+                if (btnText != null) btnText.text = "Compromised";
+            }
+            else
+            {
+                ButtonUtils.AddListener(btn, () => OnPropertySelected(property));
+            }
+        }
+
+        private bool IsPropertyOwned(BusinessState.PropertyType property)
+        {
+            var data = WeaponShipmentsSaveData.Instance != null ? WeaponShipmentsSaveData.Instance.Data : null;
+            if (data == null)
+                return false;
+
+            return property switch
+            {
+                BusinessState.PropertyType.Warehouse => GetBoolField(data, "WarehouseOwned"),
+                BusinessState.PropertyType.Bunker => GetBoolField(data, "BunkerOwned"),
+                BusinessState.PropertyType.Garage => GetBoolField(data, "GarageOwned"),
+                _ => false
+            };
+        }
+
+        private bool IsWarehouseCompromised()
+        {
+            var data = WeaponShipmentsSaveData.Instance != null ? WeaponShipmentsSaveData.Instance.Data : null;
+            if (data == null)
+                return false;
+
+            return GetBoolField(data, "WarehouseCompromised");
+        }
+
+
+        private static bool GetBoolField(object data, string fieldName)
+        {
+            try
+            {
+                var f = data.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.Public);
+                if (f == null || f.FieldType != typeof(bool))
+                    return false;
+
+                return (bool)f.GetValue(data);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private Sprite LoadPropertyImage(string fileName)
+        {
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                foreach (var name in asm.GetManifestResourceNames())
+                {
+                    var lower = name.ToLowerInvariant();
+                    if (!lower.EndsWith(fileName.ToLowerInvariant()))
+                        continue;
+
+                    using (var stream = asm.GetManifestResourceStream(name))
+                    {
+                        if (stream == null)
+                            continue;
+
+                        var data = new byte[stream.Length];
+                        stream.Read(data, 0, data.Length);
+                        return ImageUtils.LoadImageRaw(data);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Warning($"[WeaponShipmentApp] Failed loading property image {fileName}: {ex}");
+            }
+
+            return null;
+        }
+
+        private void OnPropertySelected(BusinessState.PropertyType property)
+        {
+            BusinessState.SetActiveProperty(property);
+
+            // Update left nav location card immediately
+            UpdateLocationCardForProperty(property);
+
+            ApplyPropertyRulesToUI();
 
             if (_propertySelectPanel != null) _propertySelectPanel.SetActive(false);
             if (_homePanel != null) _homePanel.SetActive(true);
@@ -367,7 +656,257 @@ namespace WeaponShipments.UI
         {
             if (_loginPanel != null) _loginPanel.SetActive(false);
             if (_propertySelectPanel != null) _propertySelectPanel.SetActive(true);
+
+            RefreshPropertySelectCards();
         }
+
+        private void OnBackToPropertySelectClicked()
+        {
+            // Return from the in-app UI to the property selection screen.
+            if (_homePanel != null) _homePanel.SetActive(false);
+            if (_propertySelectPanel != null) _propertySelectPanel.SetActive(true);
+
+            RefreshPropertySelectCards();
+
+            Controls.IsTyping = false;
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(null);
+        }
+
+        private void ApplyPropertyRulesToUI()
+        {
+            bool upgradesAllowed = BusinessState.PropertyAllowsUpgrades(BusinessState.ActiveProperty);
+
+            if (_upgradesNavButtonGO != null)
+                _upgradesNavButtonGO.SetActive(upgradesAllowed);
+
+            // If player is on Upgrades but property doesn't allow it, bounce to Home.
+            if (!upgradesAllowed && _upgradesPage != null && _upgradesPage.activeSelf)
+                SetActivePage(_homePage);
+        }
+
+        private void UpdateLocationCardForProperty(BusinessState.PropertyType property)
+        {
+            string display = property switch
+            {
+                BusinessState.PropertyType.Warehouse => "Warehouse",
+                BusinessState.PropertyType.Bunker => "Bunker",
+                BusinessState.PropertyType.Garage => "Garage",
+                _ => property.ToString()
+            };
+
+            if (_locationNameText != null)
+                _locationNameText.text = display;
+
+            if (_locationValueText != null)
+                _locationValueText.text = display;
+        }
+
+
+
+
+        private void RefreshOwnedPropertiesHome()
+        {
+            if (_ownedPropertiesContainer == null)
+                return;
+
+            // Clear previous cards
+            for (int i = _ownedPropertiesContainer.childCount - 1; i >= 0; i--)
+            {
+                var child = _ownedPropertiesContainer.GetChild(i);
+                if (child != null)
+                    UnityEngine.Object.Destroy(child.gameObject);
+            }
+
+            bool anyOwned = false;
+
+            // Desired order: Warehouse, Garage, Bunker
+            TryAddOwnedPropertyCard(BusinessState.PropertyType.Warehouse, "Warehouse", "warehouse.png", ref anyOwned);
+            TryAddOwnedPropertyCard(BusinessState.PropertyType.Garage, "Garage", "garage.png", ref anyOwned);
+            TryAddOwnedPropertyCard(BusinessState.PropertyType.Bunker, "Bunker", "bunker.png", ref anyOwned);
+
+            if (!anyOwned)
+            {
+                var none = UIFactory.Text(
+                    "NoOwnedPropertiesText",
+                    "NO PROPERTIES OWNED",
+                    _ownedPropertiesContainer,
+                    14,
+                    TextAnchor.MiddleCenter,
+                    FontStyle.Bold
+                );
+                none.color = new Color(0.9f, 0.9f, 0.9f);
+
+                var le = none.gameObject.AddComponent<LayoutElement>();
+                le.minHeight = 60f;
+            }
+        }
+
+        private void TryAddOwnedPropertyCard(
+            BusinessState.PropertyType property,
+            string displayName,
+            string imageFile,
+            ref bool anyOwned
+        )
+        {
+            // Only show owned properties
+            if (!IsPropertyOwned(property))
+                return;
+
+            // Allow player to temporarily hide a compromised warehouse card
+            if (_hiddenOwnedProperties.Contains(property))
+                return;
+
+            anyOwned = true;
+
+            bool compromised = false;
+            if (property == BusinessState.PropertyType.Warehouse)
+                compromised = IsWarehouseCompromised();
+
+            CreateOwnedPropertyCard(
+                _ownedPropertiesContainer,
+                property,
+                displayName,
+                LoadPropertyImage(imageFile),
+                compromised
+            );
+        }
+
+
+
+        private void CreateOwnedPropertyCard(
+            Transform parent,
+            BusinessState.PropertyType property,
+            string displayName,
+            Sprite sprite,
+            bool compromised
+        )
+        {
+            var card = UIFactory.Panel(
+                $"{displayName}OwnedCard",
+                parent,
+                new Color(0.02f, 0.02f, 0.02f)
+            );
+
+            var le = card.AddComponent<LayoutElement>();
+            le.minWidth = 0f;
+            le.flexibleWidth = 1f;
+            le.preferredHeight = 220f;
+
+            // IMAGE FRAME (top)
+            var imgFrame = UIFactory.Panel(
+                $"{displayName}OwnedImageFrame",
+                card.transform,
+                new Color(0.05f, 0.05f, 0.05f)
+            );
+            var imgRT = imgFrame.GetComponent<RectTransform>();
+            imgRT.anchorMin = new Vector2(0.05f, 0.40f);
+            imgRT.anchorMax = new Vector2(0.95f, 0.98f);
+            imgRT.offsetMin = Vector2.zero;
+            imgRT.offsetMax = Vector2.zero;
+
+            var img = imgFrame.GetComponent<Image>();
+            if (img == null) img = imgFrame.AddComponent<Image>();
+
+            if (sprite != null)
+            {
+                img.sprite = sprite;
+                img.color = Color.white;
+                img.preserveAspect = true;
+            }
+            else
+            {
+                img.sprite = null;
+                img.color = new Color(0.15f, 0.15f, 0.15f);
+            }
+
+            // Compromised close ("X") in the top-left of the image frame
+            if (compromised)
+            {
+                var xBtnGO = UIFactory.Panel(
+                    $"{displayName}CompromisedDismiss",
+                    imgFrame.transform,
+                    new Color(0.75f, 0.08f, 0.08f, 1f)
+                );
+
+                var xRT = xBtnGO.GetComponent<RectTransform>();
+                xRT.anchorMin = new Vector2(0f, 0.85f);
+                xRT.anchorMax = new Vector2(0.15f, 1f);
+                xRT.offsetMin = Vector2.zero;
+                xRT.offsetMax = Vector2.zero;
+
+                var xImg = xBtnGO.GetComponent<Image>();
+                if (xImg == null) xImg = xBtnGO.AddComponent<Image>();
+                xImg.color = new Color(0.75f, 0.08f, 0.08f, 1f);
+
+                var xBtn = xBtnGO.AddComponent<Button>();
+                xBtn.targetGraphic = xImg;
+
+                var xTxt = UIFactory.Text(
+                    $"{displayName}CompromisedDismissText",
+                    "X",
+                    xBtnGO.transform,
+                    16,
+                    TextAnchor.MiddleCenter,
+                    FontStyle.Bold
+                );
+                xTxt.color = Color.white;
+
+                ButtonUtils.AddListener(xBtn, () =>
+                {
+                    _hiddenOwnedProperties.Add(property);
+                });
+            }
+
+            // LABEL (middle)
+            var label = UIFactory.Text(
+                $"{displayName}OwnedLabel",
+                displayName.ToUpperInvariant(),
+                card.transform,
+                14,
+                TextAnchor.MiddleCenter,
+                FontStyle.Bold
+            );
+            label.color = Color.white;
+            var labelRT = label.GetComponent<RectTransform>();
+            labelRT.anchorMin = new Vector2(0.05f, 0.22f);
+            labelRT.anchorMax = new Vector2(0.95f, 0.40f);
+            labelRT.offsetMin = Vector2.zero;
+            labelRT.offsetMax = Vector2.zero;
+
+            // MANAGE BUTTON (bottom)
+            string buttonText = compromised ? "Compromised" : "Manage";
+            var (btnGO, btn, btnText) = UIFactory.RoundedButtonWithLabel(
+                $"{displayName}OwnedManageBtn",
+                buttonText,
+                card.transform,
+                new Color(0.35f, 0.0f, 0.0f),
+                0,
+                40,
+                16,
+                Color.white
+            );
+            var btnRT = btnGO.GetComponent<RectTransform>();
+            btnRT.anchorMin = new Vector2(0.10f, 0.06f);
+            btnRT.anchorMax = new Vector2(0.90f, 0.20f);
+            btnRT.offsetMin = Vector2.zero;
+            btnRT.offsetMax = Vector2.zero;
+
+            if (btnText != null)
+                btnText.alignment = TextAnchor.MiddleCenter;
+
+            if (compromised)
+            {
+                btn.interactable = false;
+                if (btnText != null)
+                    btnText.color = new Color(0.85f, 0.85f, 0.85f);
+            }
+            else
+            {
+                ButtonUtils.AddListener(btn, () => OnPropertySelected(property));
+            }
+        }
+
 
         // ---------------- ALERT BAR ----------------
 
@@ -520,7 +1059,7 @@ namespace WeaponShipments.UI
 
                         // Deliver a full batch (or as much as fits)
                         float before = BusinessState.Supplies;
-                        BusinessState.TryAddSupplies(BusinessConfig.MaxSupplies);
+                        BusinessState.TryAddSupplies(BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty));
                         float added = BusinessState.Supplies - before;
 
                         // Mark resupply complete for stats
@@ -619,6 +1158,27 @@ namespace WeaponShipments.UI
             topRT.offsetMin = Vector2.zero;
             topRT.offsetMax = Vector2.zero;
 
+            // Back button (top-left) -> returns to property select screen
+            var (backGO, backBtn, backLabel) = UIFactory.RoundedButtonWithLabel(
+                "BackToPropertySelect",
+                "←",
+                topBar.transform,
+                new Color(0.35f, 0.0f, 0.0f),
+                36,
+                36,
+                18,
+                Color.white
+            );
+            var backRT = backGO.GetComponent<RectTransform>();
+            backRT.anchorMin = new Vector2(0f, 0.5f);
+            backRT.anchorMax = new Vector2(0f, 0.5f);
+            backRT.pivot = new Vector2(0f, 0.5f);
+            backRT.anchoredPosition = new Vector2(10f, 0f);
+            backRT.sizeDelta = new Vector2(36f, 36f);
+            if (backLabel != null)
+                backLabel.alignment = TextAnchor.MiddleCenter;
+            ButtonUtils.AddListener(backBtn, OnBackToPropertySelectClicked);
+
             // Branding left
             var brandingArea = UIFactory.Panel(
                 "BrandingArea",
@@ -628,7 +1188,7 @@ namespace WeaponShipments.UI
             var brandingRT = brandingArea.GetComponent<RectTransform>();
             brandingRT.anchorMin = new Vector2(0f, 0f);
             brandingRT.anchorMax = new Vector2(0.55f, 1f);
-            brandingRT.offsetMin = new Vector2(10f, 0f);
+            brandingRT.offsetMin = new Vector2(55f, 0f);
             brandingRT.offsetMax = new Vector2(0f, 0f);
 
             CreateBrandingLogo(brandingArea.transform, 26, 16);
@@ -680,7 +1240,7 @@ namespace WeaponShipments.UI
             CreateNavButton(navPanel.transform, "Resupply", ShowResupplyPage);
             CreateNavButton(navPanel.transform, "Research", ShowResearchPage);
             CreateNavButton(navPanel.transform, "Sell Stock", ShowSellStockPage);
-            CreateNavButton(navPanel.transform, "Buy Upgrades", ShowUpgradesPage);
+            _upgradesNavButtonGO = CreateNavButton(navPanel.transform, "Buy Upgrades", ShowUpgradesPage);
 
             // Content area
             var contentArea = UIFactory.Panel(
@@ -756,6 +1316,10 @@ namespace WeaponShipments.UI
 
             // Global alert bar (sits above the content pages)
             BuildAlertUI(bg.transform);
+
+            // Default UI state based on current active property
+            UpdateLocationCardForProperty(BusinessState.ActiveProperty);
+            ApplyPropertyRulesToUI();
             UpdateBars();
         }
 
@@ -763,9 +1327,9 @@ namespace WeaponShipments.UI
         {
             // STOCK
             float stockPct = 0f;
-            if (BusinessConfig.MaxStock > 0)
+            if (BusinessConfig.GetMaxStock(BusinessState.ActiveProperty) > 0)
                 stockPct = Mathf.Clamp01(
-                    (float)BusinessState.Stock / BusinessConfig.MaxStock
+                    (float)BusinessState.Stock / BusinessConfig.GetMaxStock(BusinessState.ActiveProperty)
                 );
 
             foreach (var rt in _stockLevelFills)
@@ -774,7 +1338,7 @@ namespace WeaponShipments.UI
                 rt.anchorMax = new Vector2(stockPct, 1f);
             }
 
-            string stockText = $"{BusinessState.Stock}/{BusinessConfig.MaxStock}";
+            string stockText = $"{BusinessState.Stock}/{BusinessConfig.GetMaxStock(BusinessState.ActiveProperty)}";
             foreach (var txt in _stockLevelTexts)
             {
                 if (txt == null) continue;
@@ -783,9 +1347,9 @@ namespace WeaponShipments.UI
 
             // SUPPLIES
             float suppliesPct = 0f;
-            if (BusinessConfig.MaxSupplies > 0)
+            if (BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty) > 0)
                 suppliesPct = Mathf.Clamp01(
-                    (float)BusinessState.Supplies / BusinessConfig.MaxSupplies
+                    (float)BusinessState.Supplies / BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty)
                 );
 
             foreach (var rt in _suppliesLevelFills)
@@ -794,7 +1358,7 @@ namespace WeaponShipments.UI
                 rt.anchorMax = new Vector2(suppliesPct, 1f);
             }
 
-            string suppliesText = $"{BusinessState.Supplies}/{BusinessConfig.MaxSupplies}";
+            string suppliesText = $"{BusinessState.Supplies}/{BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty)}";
             foreach (var txt in _suppliesLevelTexts)
             {
                 if (txt == null) continue;
@@ -850,7 +1414,7 @@ namespace WeaponShipments.UI
             // "Active" if we can convert supplies into stock
             bool active =
                 BusinessState.Supplies > 0 &&
-                BusinessState.Stock < BusinessConfig.MaxStock;
+                BusinessState.Stock < BusinessConfig.GetMaxStock(BusinessState.ActiveProperty);
 
             string line = active
                 ? "BUSINESS STATUS:  <color=#00AA00>ACTIVE</color>"
@@ -922,7 +1486,7 @@ namespace WeaponShipments.UI
             if (BusinessState.Supplies <= 0)
                 return;
 
-            if (BusinessState.Stock >= BusinessConfig.MaxStock)
+            if (BusinessState.Stock >= BusinessConfig.GetMaxStock(BusinessState.ActiveProperty))
                 return;
 
             // consume supplies (reduced by Staff upgrade, if owned)
@@ -964,7 +1528,7 @@ namespace WeaponShipments.UI
                 return;
 
             // Stock fullness 0–1
-            float fullness = currentStock / BusinessConfig.MaxStock;
+            float fullness = currentStock / BusinessConfig.GetMaxStock(BusinessState.ActiveProperty);
 
             // Base chance scales with how full the warehouse is
             float chance = BusinessConfig.RaidBaseChance * fullness;
@@ -1105,7 +1669,7 @@ namespace WeaponShipments.UI
                 TextAnchor.MiddleCenter,
                 FontStyle.Bold
             );
-            nameText.color = Color.white;
+            _locationNameText.color = Color.white;
             var nameRT = nameText.GetComponent<RectTransform>();
             nameRT.anchorMin = new Vector2(0f, 0.15f);
             nameRT.anchorMax = new Vector2(1f, 0.30f);
@@ -1176,7 +1740,7 @@ namespace WeaponShipments.UI
 
         // ---------------- NAVIGATION ----------------
 
-        private void CreateNavButton(Transform parent, string label, Action onClick)
+        private GameObject CreateNavButton(Transform parent, string label, Action onClick)
         {
             const float navButtonHeight = 12f;
 
@@ -1203,6 +1767,8 @@ namespace WeaponShipments.UI
             layout.flexibleHeight = 0f;
 
             ButtonUtils.AddListener(button, () => onClick?.Invoke());
+
+            return buttonGO;
         }
 
         private void SetActivePage(GameObject page)
@@ -1289,7 +1855,7 @@ namespace WeaponShipments.UI
             stripRT.offsetMin = Vector2.zero;
             stripRT.offsetMax = Vector2.zero;
 
-            var nameText = UIFactory.Text(
+            _locationNameText = UIFactory.Text(
                 "LocationName",
                 "Sewer Office",
                 nameStrip.transform,
@@ -1297,8 +1863,8 @@ namespace WeaponShipments.UI
                 TextAnchor.MiddleLeft,
                 FontStyle.Bold
             );
-            nameText.color = Color.white;
-            var nameTextRT = nameText.GetComponent<RectTransform>();
+            _locationNameText.color = Color.white;
+            var nameTextRT = _locationNameText.GetComponent<RectTransform>();
             nameTextRT.offsetMin = new Vector2(6f, 0f);
             nameTextRT.offsetMax = new Vector2(-6f, 0f);
 
@@ -1329,7 +1895,7 @@ namespace WeaponShipments.UI
             locLabelRT.offsetMin = new Vector2(6f, -2f);
             locLabelRT.offsetMax = new Vector2(-6f, 0f);
 
-            var locValue = UIFactory.Text(
+            _locationValueText = UIFactory.Text(
                 "LocationValue",
                 "Sewer Office",
                 infoPanel.transform,
@@ -1337,8 +1903,8 @@ namespace WeaponShipments.UI
                 TextAnchor.LowerLeft,
                 FontStyle.Normal
             );
-            locValue.color = Color.white;
-            var locValueRT = locValue.GetComponent<RectTransform>();
+            _locationValueText.color = Color.white;
+            var locValueRT = _locationValueText.GetComponent<RectTransform>();
             locValueRT.anchorMin = new Vector2(0f, 0f);
             locValueRT.anchorMax = new Vector2(1f, 0.55f);
             locValueRT.offsetMin = new Vector2(6f, 0f);
@@ -1356,7 +1922,7 @@ namespace WeaponShipments.UI
                 new Color(0, 0, 0, 0)
             );
             var topRT = topPanel.GetComponent<RectTransform>();
-            topRT.anchorMin = new Vector2(0f, 0.65f);
+            topRT.anchorMin = new Vector2(0f, 0.72f);
             topRT.anchorMax = new Vector2(1f, 1f);
             topRT.offsetMin = new Vector2(20f, 20f);
             topRT.offsetMax = new Vector2(-20f, -20f);
@@ -1400,6 +1966,7 @@ namespace WeaponShipments.UI
                 spacing: 8,
                 padding: new RectOffset(0, 0, 0, 0)
             );
+
 
             var overviewTitle = UIFactory.Text(
                 "HomeOverviewTitle",
@@ -1518,7 +2085,7 @@ namespace WeaponShipments.UI
                 new Color(0, 0, 0, 0)
             );
             var topRT = topPanel.GetComponent<RectTransform>();
-            topRT.anchorMin = new Vector2(0f, 0.65f);
+            topRT.anchorMin = new Vector2(0f, 0.72f);
             topRT.anchorMax = new Vector2(1f, 1f);
             topRT.offsetMin = new Vector2(20f, 20f);
             topRT.offsetMax = new Vector2(-20f, -20f);
@@ -1700,7 +2267,7 @@ namespace WeaponShipments.UI
                 new Color(0, 0, 0, 0)
             );
             var topRT = topPanel.GetComponent<RectTransform>();
-            topRT.anchorMin = new Vector2(0f, 0.65f);
+            topRT.anchorMin = new Vector2(0f, 0.72f);
             topRT.anchorMax = new Vector2(1f, 1f);
             topRT.offsetMin = new Vector2(20f, 20f);
             topRT.offsetMax = new Vector2(-20f, -20f);
@@ -1830,7 +2397,7 @@ namespace WeaponShipments.UI
                 new Color(0, 0, 0, 0)
             );
             var topRT = topPanel.GetComponent<RectTransform>();
-            topRT.anchorMin = new Vector2(0f, 0.65f);
+            topRT.anchorMin = new Vector2(0f, 0.72f);
             topRT.anchorMax = new Vector2(1f, 1f);
             topRT.offsetMin = new Vector2(20f, 20f);
             topRT.offsetMax = new Vector2(-20f, -20f);
@@ -2221,7 +2788,7 @@ namespace WeaponShipments.UI
             int price = BusinessConfig.BuySuppliesPrice;
 
             // Already full
-            if (BusinessState.Supplies >= BusinessConfig.MaxSupplies)
+            if (BusinessState.Supplies >= BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty))
             {
                 WeaponShipmentApp.ShowAlertStatic(
                     "Supplies storage already full",

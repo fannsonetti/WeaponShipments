@@ -1,4 +1,7 @@
 ﻿using MelonLoader;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using WeaponShipments.NPCs;
 
@@ -6,16 +9,94 @@ namespace WeaponShipments.Data
 {
     public static class BusinessState
     {
-        private static float _supplies;
-        private static float _stock;
+        // ---------------- PROPERTY MODEL ----------------
 
-        public static float Supplies => _supplies;
-        public static float Stock => _stock;
+        public enum PropertyType
+        {
+            Bunker,
+            Warehouse,
+            Garage
+        }
+
+        public static PropertyType ActiveProperty { get; private set; } = PropertyType.Bunker;
+
+        public static void SetActiveProperty(PropertyType property)
+        {
+            ActiveProperty = property;
+            // No auto-save here; the caller/UI can decide persistence semantics.
+        }
+
+        public static bool PropertyAllowsUpgrades(PropertyType p)
+        {
+            // Per your spec:
+            // - Bunker: upgrades allowed
+            // - Warehouse: no upgrades
+            // - Garage: no upgrades
+            return p == PropertyType.Bunker;
+        }
+
+        public static bool PropertyAllowsResearch(PropertyType p)
+        {
+            // Per your spec:
+            // - Garage should have research
+            // - Bunker already has research UI (placeholder today)
+            // - Warehouse unspecified; keeping as "no research gating" is safe,
+            //   but if you want it locked, change to: (p == PropertyType.Bunker || p == PropertyType.Garage)
+            return p == PropertyType.Bunker || p == PropertyType.Garage;
+        }
+
+        // ---------------- PER-PROPERTY STORAGE ----------------
+
+        // In-memory per-property stores (so storages are separate).
+        private static readonly Dictionary<PropertyType, float> _suppliesByProperty = new();
+        private static readonly Dictionary<PropertyType, float> _stockByProperty = new();
+
+        private static float GetSupplies(PropertyType p)
+            => _suppliesByProperty.TryGetValue(p, out var v) ? v : 0f;
+
+        private static float GetStock(PropertyType p)
+            => _stockByProperty.TryGetValue(p, out var v) ? v : 0f;
+
+        private static void SetSupplies(PropertyType p, float v)
+            => _suppliesByProperty[p] = Round3(v);
+
+        private static void SetStock(PropertyType p, float v)
+            => _stockByProperty[p] = Round3(v);
+
+        public static float Supplies => GetSupplies(ActiveProperty);
+        public static float Stock => GetStock(ActiveProperty);
+
+        // ---------------- UTILS ----------------
 
         // Now accessible everywhere
         public static float Round3(float value)
         {
             return Mathf.Round(value * 1000f) / 1000f;
+        }
+
+        // ---------------- PROPERTY-SPECIFIC LIMITS / TIMING ----------------
+
+        // Warehouse rules (per your instruction)
+        private const float WarehouseConversionIntervalSeconds = 240f;
+        private const int WarehouseMaxStock = 10;
+        private const int WarehouseMaxSupplies = 5;
+
+        private static int GetMaxStock(PropertyType p)
+        {
+            if (p == PropertyType.Warehouse) return WarehouseMaxStock;
+            return BusinessConfig.MaxStock;
+        }
+
+        private static int GetMaxSupplies(PropertyType p)
+        {
+            if (p == PropertyType.Warehouse) return WarehouseMaxSupplies;
+            return BusinessConfig.MaxSupplies;
+        }
+
+        private static float GetBaseConversionInterval(PropertyType p)
+        {
+            if (p == PropertyType.Warehouse) return WarehouseConversionIntervalSeconds;
+            return BusinessConfig.ConversionInterval;
         }
 
         // ---------------- SUPPLIES ----------------
@@ -25,17 +106,24 @@ namespace WeaponShipments.Data
             if (amount <= 0)
                 return false;
 
-            if (_supplies >= BusinessConfig.MaxSupplies)
+            var p = ActiveProperty;
+            float supplies = GetSupplies(p);
+
+            int max = GetMaxSupplies(p);
+            if (supplies >= max)
                 return false;
 
-            _supplies = Mathf.Clamp(_supplies + amount, 0, BusinessConfig.MaxSupplies);
-            _supplies = Round3(_supplies);
+            supplies = Mathf.Clamp(supplies + amount, 0, max);
+            supplies = Round3(supplies);
+
+            SetSupplies(p, supplies);
 
             MelonLogger.Msg(
-                "[BusinessState] Supplies changed: {0}/{1}",
-                _supplies, BusinessConfig.MaxSupplies
+                "[BusinessState] Supplies changed ({0}): {1}/{2}",
+                p, supplies, max
             );
 
+            SyncToSaveable();
             return true;
         }
 
@@ -44,20 +132,26 @@ namespace WeaponShipments.Data
             if (amount <= 0)
                 return false;
 
-            if (_supplies < amount)
+            var p = ActiveProperty;
+            float supplies = GetSupplies(p);
+
+            if (supplies < amount)
                 return false;
 
-            float before = _supplies;
+            float before = supplies;
 
-            _supplies -= amount;
-            _supplies = Round3(_supplies);
+            supplies -= amount;
+            supplies = Round3(supplies);
+
+            SetSupplies(p, supplies);
 
             // Notify ONLY when supplies reach 0
-            if (before > 0f && _supplies <= 0f)
+            if (before > 0f && supplies <= 0f)
             {
                 Agent28.NotifySuppliesEmpty();
             }
 
+            SyncToSaveable();
             return true;
         }
 
@@ -68,40 +162,56 @@ namespace WeaponShipments.Data
             if (amount <= 0)
                 return false;
 
-            if (_stock >= BusinessConfig.MaxStock)
+            var p = ActiveProperty;
+            float stock = GetStock(p);
+
+            int max = GetMaxStock(p);
+            if (stock >= max)
                 return false;
 
-            float before = _stock;
+            float before = stock;
 
-            _stock = Mathf.Clamp(_stock + amount, 0, BusinessConfig.MaxStock);
-            _stock = Round3(_stock);
+            stock = Mathf.Clamp(stock + amount, 0, max);
+            stock = Round3(stock);
+
+            SetStock(p, stock);
 
             MelonLogger.Msg(
-                "[BusinessState] Stock changed: {0}/{1}",
-                _stock, BusinessConfig.MaxStock
+                "[BusinessState] Stock changed ({0}): {1}/{2}",
+                p, stock, max
             );
 
             // Hit max for the first time this step?
-            if (before < BusinessConfig.MaxStock && _stock >= BusinessConfig.MaxStock)
+            if (before < max && stock >= max)
             {
-                Agent28.NotifyStockFull(BusinessConfig.MaxStock);
+                Agent28.NotifyStockFull(max);
             }
 
+            SyncToSaveable();
             return true;
         }
 
         public static bool TryConsumeStock(float amount)
         {
             if (amount <= 0) return false;
-            if (_stock < amount) return false;
 
-            _stock -= amount;
-            _stock = Round3(_stock);
+            var p = ActiveProperty;
+            float stock = GetStock(p);
 
+            if (stock < amount) return false;
+
+            stock -= amount;
+            stock = Round3(stock);
+
+            SetStock(p, stock);
+
+            SyncToSaveable();
             return true;
         }
 
-        // UPGRADES STATE
+        // ---------------- UPGRADES STATE ----------------
+        // Note: upgrades are only EFFECTIVE in the Bunker. They remain stored globally.
+
         private static bool _equipmentUpgradeOwned;
         private static bool _staffUpgradeOwned;
         private static bool _securityUpgradeOwned;
@@ -112,6 +222,9 @@ namespace WeaponShipments.Data
 
         public static bool TryBuyEquipmentUpgrade()
         {
+            if (!PropertyAllowsUpgrades(ActiveProperty))
+                return false;
+
             if (_equipmentUpgradeOwned)
                 return false;
 
@@ -123,6 +236,9 @@ namespace WeaponShipments.Data
 
         public static bool TryBuyStaffUpgrade()
         {
+            if (!PropertyAllowsUpgrades(ActiveProperty))
+                return false;
+
             if (_staffUpgradeOwned)
                 return false;
 
@@ -134,6 +250,9 @@ namespace WeaponShipments.Data
 
         public static bool TryBuySecurityUpgrade()
         {
+            if (!PropertyAllowsUpgrades(ActiveProperty))
+                return false;
+
             if (_securityUpgradeOwned)
                 return false;
 
@@ -149,8 +268,10 @@ namespace WeaponShipments.Data
         /// </summary>
         public static float GetValuePerUnitMultiplier()
         {
-            float mult = 1f;
+            if (!PropertyAllowsUpgrades(ActiveProperty))
+                return 1f;
 
+            float mult = 1f;
             if (_equipmentUpgradeOwned)
                 mult += BusinessConfig.EquipmentValuePerUnitBonus;
 
@@ -164,8 +285,7 @@ namespace WeaponShipments.Data
         {
             float amount = BusinessConfig.StockPerSupply;
 
-            // Equipment upgrade improves efficiency
-            if (_equipmentUpgradeOwned)
+            if (PropertyAllowsUpgrades(ActiveProperty) && _equipmentUpgradeOwned)
                 amount *= BusinessConfig.EquipmentStockPerSupplyMult;
 
             return amount;
@@ -173,6 +293,9 @@ namespace WeaponShipments.Data
 
         public static float GetProductionSpeedMultiplier()
         {
+            if (!PropertyAllowsUpgrades(ActiveProperty))
+                return 1f;
+
             float mult = 1f;
 
             if (_equipmentUpgradeOwned)
@@ -186,6 +309,9 @@ namespace WeaponShipments.Data
 
         public static float GetRaidChanceMultiplier()
         {
+            if (!PropertyAllowsUpgrades(ActiveProperty))
+                return 1f;
+
             float mult = 1f;
 
             if (_securityUpgradeOwned)
@@ -196,7 +322,10 @@ namespace WeaponShipments.Data
 
         public static float GetEffectiveConversionInterval()
         {
-            float baseInterval = BusinessConfig.ConversionInterval;
+            float baseInterval = GetBaseConversionInterval(ActiveProperty);
+
+            // Warehouse uses a fixed interval and no upgrades; multiplier will be 1 anyway,
+            // but we keep the common pathway.
             float speedMult = GetProductionSpeedMultiplier();
 
             if (speedMult <= 0f)
@@ -206,6 +335,7 @@ namespace WeaponShipments.Data
         }
 
         // --------------- STATS / METRICS (HOME PAGE) ---------------
+        // These remain global totals (as in your current implementation).
 
         private static float _totalEarnings;
         private static int _totalSalesCount;
@@ -307,14 +437,23 @@ namespace WeaponShipments.Data
 
         /// <summary>
         /// Called by WeaponShipmentsSaveData.OnLoaded to hydrate this static state from the save file.
+        /// Backwards compatible: if Warehouse/Garage fields don't exist yet, they default to 0.
         /// </summary>
         internal static void ApplyLoadedData(WeaponShipmentsSaveData.PersistedData data)
         {
             if (data == null)
                 return;
 
-            _supplies = data.Supplies;
-            _stock = data.Stock;
+            // Default: your existing save schema = bunker core resources.
+            SetSupplies(PropertyType.Bunker, data.Supplies);
+            SetStock(PropertyType.Bunker, data.Stock);
+
+            // Optional extended schema: try to read per-property values if they exist.
+            // This avoids hard compile dependency on new fields while you iterate.
+            TryLoadFloatField(data, "WarehouseSupplies", v => SetSupplies(PropertyType.Warehouse, v));
+            TryLoadFloatField(data, "WarehouseStock", v => SetStock(PropertyType.Warehouse, v));
+            TryLoadFloatField(data, "GarageSupplies", v => SetSupplies(PropertyType.Garage, v));
+            TryLoadFloatField(data, "GarageStock", v => SetStock(PropertyType.Garage, v));
 
             _equipmentUpgradeOwned = data.EquipmentOwned;
             _staffUpgradeOwned = data.StaffOwned;
@@ -330,29 +469,50 @@ namespace WeaponShipments.Data
             _hylandSellSuccesses = data.HylandSellSuccesses;
 
             MelonLogger.Msg(
-                "[BusinessState] Loaded save data: supplies={0}, stock={1}, earnings={2}",
-                _supplies,
-                _stock,
+                "[BusinessState] Loaded save data: bunker supplies={0}, bunker stock={1}, earnings={2}",
+                GetSupplies(PropertyType.Bunker),
+                GetStock(PropertyType.Bunker),
                 _totalEarnings
             );
         }
 
+        private static void TryLoadFloatField(object data, string fieldName, Action<float> apply)
+        {
+            try
+            {
+                var f = data.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.Public);
+                if (f == null || f.FieldType != typeof(float))
+                    return;
+
+                var val = (float)f.GetValue(data);
+                apply?.Invoke(val);
+            }
+            catch
+            {
+                // intentionally ignore: field not present / incompatible
+            }
+        }
+
         /// <summary>
         /// Push current in-memory state into the S1API saveable (if it exists).
-        /// This is what actually makes your numbers get written to the JSON save.
+        /// Backwards compatible: writes bunker fields always; writes Warehouse/Garage fields only if present.
         /// </summary>
         private static void SyncToSaveable()
         {
-            var instance = WeaponShipmentsSaveData.Instance;
-            if (instance == null)
-                return; // Save system not ready yet
-
-            var data = instance.Data;
+            var save = WeaponShipmentsSaveData.Instance;
+            var data = save != null ? save.Data : null;
             if (data == null)
                 return;
 
-            data.Supplies = _supplies;
-            data.Stock = _stock;
+            // Always keep your original save schema in sync (bunker).
+            data.Supplies = GetSupplies(PropertyType.Bunker);
+            data.Stock = GetStock(PropertyType.Bunker);
+
+            // Extended schema (optional):
+            TryWriteFloatField(data, "WarehouseSupplies", GetSupplies(PropertyType.Warehouse));
+            TryWriteFloatField(data, "WarehouseStock", GetStock(PropertyType.Warehouse));
+            TryWriteFloatField(data, "GarageSupplies", GetSupplies(PropertyType.Garage));
+            TryWriteFloatField(data, "GarageStock", GetStock(PropertyType.Garage));
 
             data.EquipmentOwned = _equipmentUpgradeOwned;
             data.StaffOwned = _staffUpgradeOwned;
@@ -364,8 +524,25 @@ namespace WeaponShipments.Data
 
             data.ResupplyJobsStarted = _resupplyJobsStarted;
             data.ResupplyJobsCompleted = _resupplyJobsCompleted;
+
             data.HylandSellAttempts = _hylandSellAttempts;
             data.HylandSellSuccesses = _hylandSellSuccesses;
+        }
+
+        private static void TryWriteFloatField(object data, string fieldName, float value)
+        {
+            try
+            {
+                var f = data.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.Public);
+                if (f == null || f.FieldType != typeof(float))
+                    return;
+
+                f.SetValue(data, value);
+            }
+            catch
+            {
+                // intentionally ignore: field not present / incompatible
+            }
         }
     }
 }

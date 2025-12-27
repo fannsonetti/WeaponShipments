@@ -76,7 +76,7 @@ namespace WeaponShipments
                 // --------------------------------------------------
                 inst.transform.position = new Vector3(-27.85f, -2.515f, 173.558f);
                 inst.transform.rotation = Quaternion.Euler(270f, 270f, 0f);
-                inst.transform.localScale = new Vector3(400f, 550f, 250f);
+                inst.transform.localScale = new Vector3(430f, 575f, 250f);
 
                 // --------------------------------------------------
                 // Fix shaders/materials for runtime

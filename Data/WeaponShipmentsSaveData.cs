@@ -13,21 +13,19 @@ namespace WeaponShipments.Data
         [Serializable]
         public class PersistedData
         {
-            // Core resources
             public float Supplies = 0f;
             public float Stock = 0f;
 
-            // Active delivery
+
             public bool HasPendingSupplyShipment;
             public float SupplyShipmentArrives;
 
 
-            // Upgrades
             public bool EquipmentOwned = false;
             public bool StaffOwned = false;
             public bool SecurityOwned = false;
 
-            // Stats for the Home page
+
             public float TotalEarnings = 0f;
             public int TotalSalesCount = 0;
             public float TotalStockProduced = 0f;
@@ -37,6 +35,15 @@ namespace WeaponShipments.Data
 
             public int HylandSellAttempts = 0;
             public int HylandSellSuccesses = 0;
+
+
+            public bool WarehouseOwned = false;
+            public bool WarehouseCompromised = false;
+
+            public bool GarageOwned = false;
+
+            public bool BunkerOwned = false;
+
         }
 
         // This is what S1API actually serializes
