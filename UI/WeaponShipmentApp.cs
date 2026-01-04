@@ -15,7 +15,9 @@ using UnityEngine.UI;
 using WeaponShipments.Data;
 using WeaponShipments.Logic;
 using WeaponShipments.NPCs;
+using WeaponShipments.Saveables;
 using WeaponShipments.Services;
+using WeaponShipments.UI;
 using static MelonLoader.MelonLogger;
 
 namespace WeaponShipments.UI
@@ -259,7 +261,6 @@ namespace WeaponShipments.UI
                 fullAnchor: true
             );
 
-            // Reverted cube sizing (your previous style)
             var cube = UIFactory.Panel(
                 "PropertySelectCube",
                 bg.transform,
@@ -268,7 +269,6 @@ namespace WeaponShipments.UI
                 new Vector2(0.75f, 0.8f)
             );
 
-            // Top bar
             var topBar = UIFactory.Panel(
                 "PropertySelectTopBar",
                 cube.transform,
@@ -282,7 +282,6 @@ namespace WeaponShipments.UI
 
             CreateBrandingLogo(topBar.transform, 34, 20);
 
-            // Red line under the bar
             var divider = UIFactory.Panel(
                 "PropertySelectDivider",
                 cube.transform,
@@ -309,17 +308,14 @@ namespace WeaponShipments.UI
             titleRT.offsetMin = Vector2.zero;
             titleRT.offsetMax = Vector2.zero;
 
-            // Cards container
             var cards = UIFactory.Panel(
                 "PropertySelectCards",
                 cube.transform,
                 new Color(0, 0, 0, 0)
             );
             var cardsRT = cards.GetComponent<RectTransform>();
-
-            // Keep the same band you had, but tighten slightly so children don't get excessive vertical stretch
             cardsRT.anchorMin = new Vector2(0.05f, 0.14f);
-            cardsRT.anchorMax = new Vector2(0.95f, 0.68f);
+            cardsRT.anchorMax = new Vector2(0.95f, 0.58f);
             cardsRT.offsetMin = Vector2.zero;
             cardsRT.offsetMax = Vector2.zero;
 
@@ -327,13 +323,15 @@ namespace WeaponShipments.UI
             h.spacing = 14f;
             h.childAlignment = TextAnchor.MiddleCenter;
 
-            // Critical: don't stretch widths when a card is hidden
-            h.childControlWidth = false;
+            // Prevent width stretching when Warehouse card is hidden
+            h.childControlWidth = true;
             h.childForceExpandWidth = false;
 
-            // Let the band control height, but the card itself will set preferredHeight (next section)
+            // Keep height expansion ON (prevents tiny-square collapse)
             h.childControlHeight = true;
-            h.childForceExpandHeight = true;
+            h.childForceExpandHeight = false;
+
+            h.padding = new RectOffset(6, 6, 6, 6);
 
             _propertySelectCardsContainer = cards.transform;
 
@@ -431,10 +429,11 @@ namespace WeaponShipments.UI
 
             var le = card.AddComponent<LayoutElement>();
             // Fixed aspect/size so sibling cards do not stretch when one is hidden.
-            le.minWidth = 520f;
-            le.preferredWidth = 520f;
+            le.minWidth = 200f;
+            le.preferredWidth = 200f;
             le.flexibleWidth = 0f;
-            le.preferredHeight = 330f;
+            le.minHeight = 300f;
+            le.preferredHeight = 300f;
 
             // Image frame (box around image)
             var imgFrame = UIFactory.Panel(
@@ -466,7 +465,7 @@ namespace WeaponShipments.UI
 
             // Compromised warehouse: show an "X" in the top-left of the image frame
             // that hides the warehouse card for this session.
-            bool isCompromisedWarehouse = (property == BusinessState.PropertyType.Warehouse) && IsWarehouseCompromised();
+            bool isCompromisedWarehouse = (property == BusinessState.PropertyType.Warehouse) && IsPropertyCompromised(property);
             if (isCompromisedWarehouse)
             {
                 var xBtnGO = UIFactory.Panel(
@@ -545,7 +544,7 @@ namespace WeaponShipments.UI
 
 
             bool owned = IsPropertyOwned(property);
-            bool compromised = (property == BusinessState.PropertyType.Warehouse) && IsWarehouseCompromised();
+            bool compromised = IsPropertyCompromised(property);
 
             if (!owned)
             {
@@ -563,45 +562,35 @@ namespace WeaponShipments.UI
             }
         }
 
+
         private bool IsPropertyOwned(BusinessState.PropertyType property)
         {
-            var data = WeaponShipmentsSaveData.Instance != null ? WeaponShipmentsSaveData.Instance.Data : null;
+            var data = WeaponShipmentsSaveData.Instance?.Data;
             if (data == null)
                 return false;
 
             return property switch
             {
-                BusinessState.PropertyType.Warehouse => GetBoolField(data, "WarehouseOwned"),
-                BusinessState.PropertyType.Bunker => GetBoolField(data, "BunkerOwned"),
-                BusinessState.PropertyType.Garage => GetBoolField(data, "GarageOwned"),
+                BusinessState.PropertyType.Warehouse => data.Properties.Warehouse.Owned,
+                BusinessState.PropertyType.Garage => data.Properties.Garage.Owned,
+                BusinessState.PropertyType.Bunker => data.Properties.Bunker.Owned,
                 _ => false
             };
         }
 
-        private bool IsWarehouseCompromised()
+        private bool IsPropertyCompromised(BusinessState.PropertyType property)
         {
-            var data = WeaponShipmentsSaveData.Instance != null ? WeaponShipmentsSaveData.Instance.Data : null;
+            var data = WeaponShipmentsSaveData.Instance?.Data;
             if (data == null)
                 return false;
 
-            return GetBoolField(data, "WarehouseCompromised");
-        }
-
-
-        private static bool GetBoolField(object data, string fieldName)
-        {
-            try
+            return property switch
             {
-                var f = data.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.Public);
-                if (f == null || f.FieldType != typeof(bool))
-                    return false;
-
-                return (bool)f.GetValue(data);
-            }
-            catch
-            {
-                return false;
-            }
+                BusinessState.PropertyType.Warehouse => data.Properties.Warehouse.Compromised,
+                BusinessState.PropertyType.Garage => data.Properties.Garage.Compromised,
+                BusinessState.PropertyType.Bunker => data.Properties.Bunker.Compromised,
+                _ => false
+            };
         }
 
         private Sprite LoadPropertyImage(string fileName)
@@ -761,7 +750,7 @@ namespace WeaponShipments.UI
 
             bool compromised = false;
             if (property == BusinessState.PropertyType.Warehouse)
-                compromised = IsWarehouseCompromised();
+                compromised = IsPropertyCompromised(BusinessState.PropertyType.Warehouse);
 
             CreateOwnedPropertyCard(
                 _ownedPropertiesContainer,
@@ -1044,38 +1033,82 @@ namespace WeaponShipments.UI
         {
             while (true)
             {
-                var save = WeaponShipmentsSaveData.Instance;
-                var data = save != null ? save.Data : null;
-
-                if (data != null && data.HasPendingSupplyShipment)
+                try
                 {
-                    // Count down using IN-GAME time
-                    data.SupplyShipmentArrives -= Time.deltaTime;
+                    var save = WeaponShipmentsSaveData.Instance;
+                    var data = save != null ? save.Data : null;
 
-                    if (data.SupplyShipmentArrives <= 0f)
+                    if (data != null)
                     {
-                        data.SupplyShipmentArrives = 0f;
-                        data.HasPendingSupplyShipment = false;
+                        var p = BusinessState.ActiveProperty;
+                        bool deliveredAny = false;
 
-                        // Deliver a full batch (or as much as fits)
-                        float before = BusinessState.Supplies;
-                        BusinessState.TryAddSupplies(BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty));
-                        float added = BusinessState.Supplies - before;
+                        if (p == BusinessState.PropertyType.Warehouse)
+                        {
+                            var list = data.Properties.Warehouse.PendingShipments;
+                            for (int i = list.Count - 1; i >= 0; i--)
+                            {
+                                var s = list[i];
+                                s.ArrivesAt -= Time.deltaTime;
 
-                        // Mark resupply complete for stats
-                        BusinessState.RegisterResupplyJobCompleted();
+                                if (s.ArrivesAt <= 0f)
+                                {
+                                    float add = (s.SuppliesAmount > 0f) ? s.SuppliesAmount : BusinessConfig.GetMaxSupplies(p);
+                                    BusinessState.TryAddSupplies(add);
+                                    BusinessState.RegisterResupplyJobCompleted();
+                                    list.RemoveAt(i);
+                                    deliveredAny = true;
+                                }
+                            }
+                        }
+                        else if (p == BusinessState.PropertyType.Garage)
+                        {
+                            var list = data.Properties.Garage.PendingShipments;
+                            for (int i = list.Count - 1; i >= 0; i--)
+                            {
+                                var s = list[i];
+                                s.ArrivesAt -= Time.deltaTime;
 
-                        // Notify Agent 28 that a shipment (not instant buy) arrived
-                        Agent28.NotifySuppliesArrived(
-                            (int)added,
-                            BusinessState.Supplies,
-                            true  // fromShipment
-                        );
+                                if (s.ArrivesAt <= 0f)
+                                {
+                                    float add = (s.SuppliesAmount > 0f) ? s.SuppliesAmount : BusinessConfig.GetMaxSupplies(p);
+                                    BusinessState.TryAddSupplies(add);
+                                    BusinessState.RegisterResupplyJobCompleted();
+                                    list.RemoveAt(i);
+                                    deliveredAny = true;
+                                }
+                            }
+                        }
+                        else // Bunker
+                        {
+                            var list = data.Properties.Bunker.PendingShipments;
+                            for (int i = list.Count - 1; i >= 0; i--)
+                            {
+                                var s = list[i];
+                                s.ArrivesAt -= Time.deltaTime;
 
-                        var app = Instance;
-                        if (app != null)
-                            app.UpdateBars();
+                                if (s.ArrivesAt <= 0f)
+                                {
+                                    float add = (s.SuppliesAmount > 0f) ? s.SuppliesAmount : BusinessConfig.GetMaxSupplies(p);
+                                    BusinessState.TryAddSupplies(add);
+                                    BusinessState.RegisterResupplyJobCompleted();
+                                    list.RemoveAt(i);
+                                    deliveredAny = true;
+                                }
+                            }
+                        }
+
+                        if (deliveredAny)
+                        {
+                            var app = Instance;
+                            if (app != null)
+                                app.UpdateBars();
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    Error($"[WeaponShipmentApp] SupplyShipmentRoutine error: {ex}");
                 }
 
                 // Next frame – stays in sync with in-game time
@@ -2787,6 +2820,9 @@ namespace WeaponShipments.UI
             float balance = Money.GetCashBalance();
             int price = BusinessConfig.BuySuppliesPrice;
 
+            // Delivery delay (seconds)
+            float delaySeconds = BusinessConfig.BuySuppliesDeliveryDelay;
+
             // Already full
             if (BusinessState.Supplies >= BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty))
             {
@@ -2811,17 +2847,6 @@ namespace WeaponShipments.UI
                 return;
             }
 
-            // Only one paid shipment at a time
-            if (data.HasPendingSupplyShipment)
-            {
-                WeaponShipmentApp.ShowAlertStatic(
-                    "Shipment already on the way",
-                    "Wait for the current resupply to arrive before buying another.",
-                    false
-                );
-                return;
-            }
-
             // Money check
             if (balance < price)
             {
@@ -2836,13 +2861,31 @@ namespace WeaponShipments.UI
             // Pay now
             Money.ChangeCashBalance(-price);
 
-            // Start an IN-GAME timer, in seconds.
-            // This uses whatever delay you configured (e.g. 600f = 10 minutes).
-            float delaySeconds = BusinessConfig.BuySuppliesDeliveryDelay;
-
-            data.HasPendingSupplyShipment = true;
-            data.SupplyShipmentArrives = delaySeconds;
-
+            // Allow multiple concurrent shipments per property (queued).
+            if (BusinessState.ActiveProperty == BusinessState.PropertyType.Warehouse)
+            {
+                data.Properties.Warehouse.PendingShipments.Add(new WarehouseShipment
+                {
+                    ArrivesAt = delaySeconds,
+                    SuppliesAmount = BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty)
+                });
+            }
+            else if (BusinessState.ActiveProperty == BusinessState.PropertyType.Garage)
+            {
+                data.Properties.Garage.PendingShipments.Add(new GarageShipment
+                {
+                    ArrivesAt = delaySeconds,
+                    SuppliesAmount = BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty)
+                });
+            }
+            else
+            {
+                data.Properties.Bunker.PendingShipments.Add(new BunkerShipment
+                {
+                    ArrivesAt = delaySeconds,
+                    SuppliesAmount = BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty)
+                });
+            }
             // Stats
             BusinessState.RegisterResupplyJobStarted();
 

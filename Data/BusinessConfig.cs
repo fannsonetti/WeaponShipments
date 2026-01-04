@@ -11,6 +11,10 @@ namespace WeaponShipments.Data
         public static int MaxSupplies => WeaponShipmentsPrefs.MaxSupplies.Value;
         public static int MaxStock => WeaponShipmentsPrefs.MaxStock.Value;
 
+        public static int WarehousePrice => WeaponShipmentsPrefs.WarehousePrice.Value;
+        public static int SigningBonus => WeaponShipmentsPrefs.SigningBonus.Value;
+        public static int GaragePrice => WeaponShipmentsPrefs.GaragePrice.Value;
+
         // ============================================================
         // PROPERTY-SPECIFIC OVERRIDES
         // ============================================================

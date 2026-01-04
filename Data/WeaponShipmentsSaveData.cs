@@ -1,57 +1,31 @@
 ﻿using System;
 using S1API.Internal.Abstraction;
 using S1API.Saveables;
+using WeaponShipments.Saveables;
 
 namespace WeaponShipments.Data
 {
     /// <summary>
     /// S1API saveable backing store for the Weapon Shipments business.
-    /// This is automatically discovered by S1API because it inherits Saveable.
+    /// Automatically discovered by S1API because it inherits Saveable.
     /// </summary>
     public class WeaponShipmentsSaveData : Saveable
     {
         [Serializable]
         public class PersistedData
         {
-            public float Supplies = 0f;
-            public float Stock = 0f;
-
-
-            public bool HasPendingSupplyShipment;
-            public float SupplyShipmentArrives;
-
-
-            public bool EquipmentOwned = false;
-            public bool StaffOwned = false;
-            public bool SecurityOwned = false;
-
-
-            public float TotalEarnings = 0f;
-            public int TotalSalesCount = 0;
-            public float TotalStockProduced = 0f;
-
-            public int ResupplyJobsStarted = 0;
-            public int ResupplyJobsCompleted = 0;
-
-            public int HylandSellAttempts = 0;
-            public int HylandSellSuccesses = 0;
-
-
-            public bool WarehouseOwned = false;
-            public bool WarehouseCompromised = false;
-
-            public bool GarageOwned = false;
-
-            public bool BunkerOwned = false;
-
+            // Grouped, human-readable save sections
+            public SavedStock Stock = new SavedStock();
+            public SavedProperties Properties = new SavedProperties();
+            public SavedStats Stats = new SavedStats();
         }
 
-        // This is what S1API actually serializes
+        // This is what S1API serializes to JSON
         [SaveableField("WeaponShipmentsState")]
         private PersistedData _data = new PersistedData();
 
         /// <summary>
-        /// Live instance S1API created. BusinessState uses this.
+        /// Live instance S1API created. BusinessState/UI can reference this.
         /// </summary>
         public static WeaponShipmentsSaveData Instance { get; private set; }
 
@@ -61,13 +35,13 @@ namespace WeaponShipments.Data
         }
 
         /// <summary>
-        /// Expose data for BusinessState to sync with.
+        /// Expose data for other systems (BusinessState, UI) to read/write.
         /// </summary>
         public PersistedData Data => _data;
 
         /// <summary>
         /// Called by S1API after JSON has been loaded.
-        /// Pushes values into BusinessState's static fields.
+        /// Push values into BusinessState's runtime fields.
         /// </summary>
         protected override void OnLoaded()
         {

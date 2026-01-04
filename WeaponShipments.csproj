@@ -201,14 +201,23 @@
 		</Reference>
 	</ItemGroup>
 	<ItemGroup>
+		<Compile Include="NPCs\UnknownContact.cs" />
+		<Compile Include="Quests\Act0\Act0ContactQuest.cs" />
+		<Compile Include="Quests\Act0\Act0ContactQuestManager.cs" />
 		<Compile Include="Core.cs" />
 		<Compile Include="Data\BusinessConfig.cs" />
+		<Compile Include="Quests\Act0\Act0DelayedStarter.cs" />
+		<Compile Include="Saveables\SavedProperties.cs" />
+		<Compile Include="Saveables\SavedStats.cs" />
+		<Compile Include="Saveables\SavedStock.cs" />
 		<Compile Include="Data\WeaponShipmentsPrefs.cs" />
 		<Compile Include="Data\WeaponShipmentsSaveData.cs" />
 		<Compile Include="Logic\SellCalculator.cs" />
 		<Compile Include="Logic\StockConverter.cs" />
+		<Compile Include="Models\TerrainLoader.cs" />
+		<Compile Include="Models\GarageLoader.cs" />
 		<Compile Include="NPCs\Agent28.cs" />
-		<Compile Include="Models\AssetBundleLoader.cs" />
+		<Compile Include="Models\WarehouseLoader.cs" />
 		<Compile Include="Services\ShipmentBusts.cs" />
 		<Compile Include="Services\ShipmentProximityDetector.cs" />
 		<Compile Include="Services\ShipmentSpawner.cs" />
@@ -219,7 +228,9 @@
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\*.png" />
-		<EmbeddedResource Include="bunker" />
+		<None Remove="terrain" />
+		<EmbeddedResource Include="garage" />
+		<EmbeddedResource Include="terrain" />
 		<EmbeddedResource Include="warehouse" />
 	</ItemGroup>
 	<!-- S1API.Forked Reference: NuGet Package (default) -->
@@ -230,10 +241,6 @@
 			<HintPath>$(S1APILocalPath)</HintPath>
 			<Private>True</Private>
 		</Reference>
-	</ItemGroup>
-	<ItemGroup>
-	  <None Remove="bunkerproperty" />
-	  <None Remove="Resources\bunker" />
 	</ItemGroup>
 	<ItemGroup>
 	  <None Include="Data\BusinessState.cs" />

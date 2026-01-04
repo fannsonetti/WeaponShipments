@@ -6,11 +6,16 @@ namespace WeaponShipments.Data
     {
         private static readonly MelonPreferences_Category _category;
 
-        // ---------------- CORE LIMITS ----------------
+        // ---------------- PROPERTY PRICES -----------------
+
+        public static MelonPreferences_Entry<int> WarehousePrice;
+        public static MelonPreferences_Entry<int> SigningBonus;
+        public static MelonPreferences_Entry<int> GaragePrice;
+
+        // ---------------- STOCK SUPPLIES ----------------
         public static MelonPreferences_Entry<int> MaxSupplies;
         public static MelonPreferences_Entry<int> MaxStock;
 
-        // ---------------- PROPERTY LIMITS (NEW) ----------------
         public static MelonPreferences_Entry<int> WarehouseMaxSupplies;
         public static MelonPreferences_Entry<int> WarehouseMaxStock;
         public static MelonPreferences_Entry<float> WarehouseConversionInterval;
@@ -65,6 +70,29 @@ namespace WeaponShipments.Data
                 "Weapon Shipments"
             );
 
+            // -------------- PROPERTY PRICES ---------------
+
+            WarehousePrice = _category.CreateEntry(
+                "WarehousePrice",
+                5000,
+                "Warehouse Price",
+                "The price required to buy the Warehouse"
+            );
+
+            SigningBonus = _category.CreateEntry(
+                "SigningBonus",
+                3000,
+                "Signing Bonus",
+                "The price required to hire an Employee"
+            );
+
+            GaragePrice = _category.CreateEntry(
+                "GaragePrice",
+                35000,
+                "Garage Price",
+                "The price required to buy the Garage"
+            );
+
             // ---------------- CORE LIMITS ----------------
             MaxSupplies = _category.CreateEntry(
                 "MaxSupplies",
@@ -80,7 +108,6 @@ namespace WeaponShipments.Data
                 "Maximum stock storage (default / bunker)."
             );
 
-            // ---------------- PROPERTY LIMITS (NEW) ----------------
             WarehouseMaxSupplies = _category.CreateEntry(
                 "WarehouseMaxSupplies",
                 5,

@@ -13,9 +13,12 @@ using S1API.Map.ParkingLots;
 using S1API.Money;
 using S1API.Products;
 using S1API.Properties;
+using S1API.Quests;
 using S1API.Vehicles;
 using System.Linq;
 using UnityEngine;
+using WeaponShipments.Data;
+using WeaponShipments.Saveables;
 
 namespace WeaponShipments.NPCs
 {
@@ -23,7 +26,7 @@ namespace WeaponShipments.NPCs
     /// An example S1API NPC that opts into a physical rig.
     /// Demonstrates movement and inventory usage.
     /// </summary>
-    public sealed class Agent28 : NPC
+    public sealed partial class Agent28 : NPC
     {
         public static Agent28 Instance { get; private set; }
         public override bool IsPhysical => true;
@@ -324,7 +327,6 @@ namespace WeaponShipments.NPCs
                     av.WithAccessoryLayer("Avatar/Accessories/Chest/BulletproofVest/BulletproofVest", new Color(0.151f, 0.151f, 0.151f));
                 })
                 .WithSpawnPosition(spawnPos)
-                .EnsureCustomer()
                 .WithCustomerDefaults(cd =>
                 {
                     cd.WithSpending(minWeekly: 500f, maxWeekly: 1500f)
@@ -359,6 +361,148 @@ namespace WeaponShipments.NPCs
         public Agent28() : base()
         {
         }
+        // --- Act 0: first meet / warehouse purchase ---
+        private const string ACT0_CONTAINER = "Act0_Agent28_FirstMeet";
+        private const string ACT0_CH_PAYNOW = "ACT0_PAY_NOW";
+        private const string ACT0_CH_NOTYET = "ACT0_NOT_YET";
+        private const string ACT0_CH_LEAVE = "ACT0_LEAVE";
+
+        // Tune these numbers (or pull from prefs/config later)
+        private static int ACT0_WAREHOUSE_PRICE => BusinessConfig.WarehousePrice;
+
+        private void RegisterAct0FirstMeetDialogue()
+        {
+            try
+            {
+                int warehousePrice = BusinessConfig.WarehousePrice;
+                int signingBonus = BusinessConfig.SigningBonus;
+                int totalDue = warehousePrice + signingBonus;
+
+                // Prebuild the costs text as a plain string (no lambda overload).
+                string costsText =
+                    "Paper trails matter. Mine is quieter than yours.\n\n" +
+                    $"Warehouse: ${warehousePrice:N0}\n\n" +
+                    "I already have someone lined up.\n" +
+                    "Logistics. Discreet. Useful.\n\n" +
+                    $"Signing bonus: ${signingBonus:N0}\n\n" +
+                    $"Total due now: ${totalDue:N0}";
+
+                Dialogue.BuildAndRegisterContainer(ACT0_CONTAINER, c =>
+                {
+                    {
+                        c.AddNode("ENTRY",
+                            "You showed up. That already tells me you’re capable of following instructions.",
+                            ch =>
+                            {
+                                ch.Add("ACT0_CONTINUE", "Go on.", "SEPARATION_1");
+                                ch.Add(ACT0_CH_LEAVE, "Not right now.", "EXIT");
+                            });
+
+                        c.AddNode("SEPARATION_1",
+                            "You already know how to run a property",
+                            ch => ch.Add("ACT0_CONTINUE3", "Yeah", "SEPARATION_2"));
+
+                        c.AddNode("SEPARATION_2",
+                            "Those places are built for production, controlled environments, predictable flow.",
+                            ch => ch.Add("ACT0_CONTINUE4", "Alright", "SEPARATION_3"));
+
+                        c.AddNode("SEPARATION_3",
+                            "But weapons are different. They move faster. They attract attention earlier. \n" +
+                            "If you run both out of the same places, you cross signals. That’s how patterns form.",
+                            ch => ch.Add("ACT0_CONTINUE5", "So what’s the fix?", "FIX"));
+
+                        c.AddNode("FIX",
+                            "Separation.\n" +
+                            "Different storage. Different routes. Different places. That’s where I come in\n" +
+                            "Supplies are your problem. What happens after they arrive is mine.",
+                            ch => ch.Add("ACT0_CONTINUE6", "Understood.", "WAREHOUSE_1"));
+
+                        c.AddNode("WAREHOUSE_1",
+                            "For the first step, you need a base that isn’t tied to your other work.",
+                            ch =>
+                            {
+                                ch.Add("ACT0_COSTS", "Where would i get that?", "WAREHOUSE_2");
+                            });
+
+                        c.AddNode("WAREHOUSE_2",
+                            "I already own a warehouse that fits what you need.",
+                            ch =>
+                            {
+                                ch.Add("ACT0_COSTS", "How much?", "COSTS");
+                                ch.Add("ACT0_COSTS2", "Im assuming its not free?", "COSTS");
+                            });
+
+                        c.AddNode("COSTS",
+                            "A place like this would go for 8 grand.\n" +
+                            $"But you can have it for ${ACT0_WAREHOUSE_PRICE:N0}",
+                            ch =>
+                            {
+                                ch.Add(ACT0_CH_PAYNOW, "Pay now.", "COMPLETE");
+                                ch.Add(ACT0_CH_NOTYET, "Not yet.", "NOTYET");
+                            });
+
+                        c.AddNode("PAYING",
+                            "Good.\n\n" +
+                            "You transfer the money.\n" +
+                            "I handle the purchase and the hire.\n" +
+                            "Once it’s done, you’ll have a base and someone to keep it stable.");
+
+                        c.AddNode("NOT_ENOUGH",
+                            "Then you’re not ready.\n" +
+                            "Come back when you have the cash. Don’t waste my time.");
+
+                        c.AddNode("NOTYET",
+                            "Then we’re done here.\n" +
+                            "When you’re ready to move, you know where to find me.");
+
+                        c.AddNode("COMPLETE",
+                            "The Warehouse is secured.\n" +
+                            "You’ll need an employee on site to start turning supplies into stock.”");
+
+                        c.AddNode("EXIT",
+                            "Then don’t stand here.\n" +
+                            "Walk away before you make this messy.");
+                    }
+                });
+
+                // PAY callback
+                Dialogue.OnChoiceSelected(ACT0_CH_PAYNOW, () =>
+                {
+                    // Pull live values at click time (in case prefs changed)
+                    int wPrice = BusinessConfig.WarehousePrice;
+
+                    float balance = Money.GetCashBalance();
+                    if (balance < wPrice)
+                    {
+                        Dialogue.JumpTo(ACT0_CONTAINER, "NOT_ENOUGH");
+                        return;
+                    }
+
+                    Money.ChangeCashBalance(-wPrice, visualizeChange: true, playCashSound: true);
+
+                    var data = WeaponShipmentsSaveData.Instance?.Data;
+                    if (data != null)
+                    {
+                        data.Properties.Warehouse.Owned = true;
+                    }
+
+                    // Progress Act 0
+                    Act0ContactQuestManager.MetAgent();
+
+                    SendTextMessage("");
+                    Dialogue.StopOverride();
+                    Dialogue.JumpTo(ACT0_CONTAINER, "COMPLETE");
+                });
+
+                Dialogue.UseContainerOnInteract(ACT0_CONTAINER);
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error($"[Act0] RegisterAct0FirstMeetDialogue failed: {ex}");
+                if (ex.InnerException != null)
+                    MelonLogger.Error($"[Act0] Inner: {ex.InnerException}");
+            }
+        }
 
         protected override void OnCreated()
         {
@@ -368,6 +512,7 @@ namespace WeaponShipments.NPCs
 
                 base.OnCreated();
                 Appearance.Build();
+                RegisterAct0FirstMeetDialogue();
 
                 Aggressiveness = 1f;
                 Region = Region.Northtown;
@@ -376,7 +521,7 @@ namespace WeaponShipments.NPCs
             }
             catch (Exception ex)
             {
-                MelonLogger.Error($"ExamplePhysicalNPC OnCreated failed: {ex.Message}");
+                MelonLogger.Error($"Agent28 OnCreated failed: {ex.Message}");
                 MelonLogger.Error($"StackTrace: {ex.StackTrace}");
             }
         }

@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 
 namespace WeaponShipments
 {
-    public static class AssetBundleLoader
+    public static class WarehouseLoader
     {
         private const string WAREHOUSE_RESOURCE_NAME = "WeaponShipments.warehouse";
         private static bool _loaded;
@@ -62,7 +62,7 @@ namespace WeaponShipments
 
                 var prefab = prefabs[0];
                 var inst = Object.Instantiate(prefab);
-                inst.name = $"warehouse_INSTANCE_{prefab.name}";
+                inst.name = $"WeaponShipments_{prefab.name}";
 
                 // --------------------------------------------------
                 // Move into active scene
