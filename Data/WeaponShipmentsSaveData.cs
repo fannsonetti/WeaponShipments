@@ -12,12 +12,23 @@ namespace WeaponShipments.Data
     public class WeaponShipmentsSaveData : Saveable
     {
         [Serializable]
+        public class SavedAct0ContactQuest
+        {
+            public int Stage = 0;
+            public bool AwaitingWakeup = false;
+            public int LeadDay = -1;
+            public bool Sent1900 = false;
+            public bool Revealed2200 = false;
+        }
+
+        [Serializable]
         public class PersistedData
         {
             // Grouped, human-readable save sections
             public SavedStock Stock = new SavedStock();
             public SavedProperties Properties = new SavedProperties();
             public SavedStats Stats = new SavedStats();
+            public SavedAct0ContactQuest Act0Contact = new SavedAct0ContactQuest();
         }
 
         // This is what S1API serializes to JSON
@@ -38,6 +49,11 @@ namespace WeaponShipments.Data
         /// Expose data for other systems (BusinessState, UI) to read/write.
         /// </summary>
         public PersistedData Data => _data;
+
+        /// <summary>
+        /// Expose Act0 quest save data for the quest system.
+        /// </summary>
+        public SavedAct0ContactQuest Act0Contact => _data.Act0Contact;
 
         /// <summary>
         /// Called by S1API after JSON has been loaded.
