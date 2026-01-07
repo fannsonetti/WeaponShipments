@@ -4,6 +4,7 @@ using S1API.Quests;
 using UnityEngine;
 using System.Collections;
 using UnityEngine.SceneManagement;
+using WeaponShipments.Quests;
 using WeaponShipments.Services;
 using WeaponShipments.Utils;
 
@@ -36,6 +37,7 @@ namespace WeaponShipments
                 TerrainLoader.LoadTerrainAdditiveOnce();
             }
         }
+
         public override void OnSceneWasLoaded(int buildIndex, string sceneName)
         {
             if (sceneName != "Main")

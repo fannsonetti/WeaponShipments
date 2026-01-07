@@ -2408,13 +2408,19 @@ namespace WeaponShipments.UI
             _sellSerenaLabel = sfLabel;
             if (sfLabel != null)
                 sfLabel.alignment = TextAnchor.MiddleCenter;
-
-            var sfLE = sfGO.AddComponent<LayoutElement>();
-            sfLE.minHeight = 32f;
-
+            sfGO.AddComponent<LayoutElement>().minHeight = 32f;
             sfBtn.interactable = false;
 
-            var overlay = sfGO.AddComponent<Image>();
+            // Create a separate child GameObject for the overlay instead of adding Image to sfGO
+            // (sfGO already has an Image used by its Mask component)
+            var overlayGO = new GameObject("LockedOverlay");
+            overlayGO.transform.SetParent(sfGO.transform, false);
+            var overlayRT = overlayGO.AddComponent<RectTransform>();
+            overlayRT.anchorMin = Vector2.zero;
+            overlayRT.anchorMax = Vector2.one;
+            overlayRT.offsetMin = Vector2.zero;
+            overlayRT.offsetMax = Vector2.zero;
+            var overlay = overlayGO.AddComponent<Image>();
             overlay.color = new Color(0, 0, 0, 0.35f);
             overlay.raycastTarget = false;
         }
@@ -2544,6 +2550,7 @@ namespace WeaponShipments.UI
                 parent,
                 new Color(0, 0, 0, 0)
             );
+
             var rowRT = row.GetComponent<RectTransform>();
             rowRT.sizeDelta = new Vector2(0f, 26f);
 
@@ -2577,6 +2584,7 @@ namespace WeaponShipments.UI
                 row.transform,
                 new Color(0.8f, 0.8f, 0.8f)
             );
+
             var outerRT = barOuter.GetComponent<RectTransform>();
             outerRT.anchorMin = new Vector2(0f, 0.5f);
             outerRT.anchorMax = new Vector2(0f, 0.5f);
@@ -2593,6 +2601,7 @@ namespace WeaponShipments.UI
                 barOuter.transform,
                 new Color(0.02f, 0.02f, 0.02f)
             );
+
             var innerRT = barInner.GetComponent<RectTransform>();
             innerRT.anchorMin = new Vector2(0f, 0f);
             innerRT.anchorMax = new Vector2(1f, 1f);
@@ -2604,6 +2613,7 @@ namespace WeaponShipments.UI
                 barInner.transform,
                 new Color(0.7f, 0.1f, 0.1f)
             );
+
             var fillRT = fillGO.GetComponent<RectTransform>();
             fillRT.anchorMin = new Vector2(0f, 0f);
             fillRT.anchorMax = new Vector2(0f, 1f);
@@ -2620,6 +2630,7 @@ namespace WeaponShipments.UI
                 FontStyle.Normal
             );
             valueText.color = Color.white;
+
             var valueRT = valueText.GetComponent<RectTransform>();
             valueRT.anchorMin = new Vector2(0f, 0.5f);
             valueRT.anchorMax = new Vector2(0f, 0.5f);

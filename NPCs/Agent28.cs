@@ -18,6 +18,7 @@ using S1API.Vehicles;
 using System.Linq;
 using UnityEngine;
 using WeaponShipments.Data;
+using WeaponShipments.Quests;
 using WeaponShipments.Saveables;
 
 namespace WeaponShipments.NPCs
