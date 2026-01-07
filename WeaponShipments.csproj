@@ -201,12 +201,15 @@
 		</Reference>
 	</ItemGroup>
 	<ItemGroup>
+		<Compile Include="NPCs\Manny.cs" />
+		<Compile Include="NPCs\Archie.cs" />
 		<Compile Include="NPCs\UnknownContact.cs" />
 		<Compile Include="Quests\Act0\Act0ContactQuest.cs" />
 		<Compile Include="Quests\Act0\Act0ContactQuestManager.cs" />
 		<Compile Include="Core.cs" />
 		<Compile Include="Data\BusinessConfig.cs" />
 		<Compile Include="Quests\Act0\Act0DelayedStarter.cs" />
+		<Compile Include="Quests\Act0\QuestSaveDebus.cs" />
 		<Compile Include="Saveables\SavedProperties.cs" />
 		<Compile Include="Saveables\SavedStats.cs" />
 		<Compile Include="Saveables\SavedStock.cs" />

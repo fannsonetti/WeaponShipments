@@ -30,7 +30,7 @@ public static class Act0DelayedStarter
             yield break;
         }
 
-        data.Stats.Act0Started = true;
+        data.Stats.Act0Started = false;
 
         UnknownContact.Instance.SendIntro();
 

@@ -55,7 +55,7 @@ public sealed class  UnknownContact : NPC
         {
             Label = "ok_response",
             Text = "Don’t waste my time.",
-            OnTriggered = () => Act0ContactQuestManager.StartQuest(),
+            OnTriggered = () => Act0ContactQuestManager.AgentMeetup(),
         };
 
         SendTextMessage(
@@ -67,6 +67,6 @@ public sealed class  UnknownContact : NPC
         public void SendWho()
     {
         SendTextMessage("Thats none of your concern.");
-        Act0ContactQuestManager.StartQuest();
+        Act0ContactQuestManager.AgentMeetup();
     }
 }

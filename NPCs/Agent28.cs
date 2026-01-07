@@ -147,6 +147,7 @@ namespace WeaponShipments.NPCs
             int i = UnityEngine.Random.Range(0, lines.Length);
             Instance.SendTextMessage(lines[i]);
         }
+
         public static void NotifySellJobStart(string spawnLabel, bool isVehicle, string dropoffLabel)
         {
             if (Instance == null)
@@ -164,21 +165,21 @@ namespace WeaponShipments.NPCs
             // First text: where the shipment is, and what form it is in
             string[] crateLines =
             {
-        $"Shipment's sitting in a crate {spawnLabel}.",
-        $"Crate's prepped {spawnLabel}. Go pick it up.",
-        $"Your load's packed into a crate {spawnLabel}.",
-        $"Crate is staged {spawnLabel}. Move it when you're ready.",
-        $"Product's boxed up in a crate {spawnLabel}."
-    };
+                $"Shipment's sitting in a crate {spawnLabel}.",
+                $"Crate's prepped {spawnLabel}. Go pick it up.",
+                $"Your load's packed into a crate {spawnLabel}.",
+                $"Crate is staged {spawnLabel}. Move it when you're ready.",
+                $"Product's boxed up in a crate {spawnLabel}."
+            };
 
             string[] vehicleLines =
             {
-        $"Delivery car is waiting {spawnLabel}.",
-        $"Vehicle's staged {spawnLabel}. Keys are in it.",
-        $"Your load's already loaded into a vehicle {spawnLabel}.",
-        $"Ride is parked {spawnLabel}. That's your delivery car.",
-        $"Vehicle with the product is sitting {spawnLabel}."
-    };
+                $"Delivery car is waiting {spawnLabel}.",
+                $"Vehicle's staged {spawnLabel}. Keys are in it.",
+                $"Your load's already loaded into a vehicle {spawnLabel}.",
+                $"Ride is parked {spawnLabel}. That's your delivery car.",
+                $"Vehicle with the product is sitting {spawnLabel}."
+            };
 
             string first;
             if (isVehicle)
@@ -201,12 +202,12 @@ namespace WeaponShipments.NPCs
             // Second text: buyer confirmed, tell them to deliver to dropoff
             string[] dropoffLines =
             {
-        $"Buyer just confirmed the location. Deliver it to {dropoffLabel}.",
-        $"All right, buyer's locked in on the location. Get it to {dropoffLabel}.",
-        $"Route's live. Take the shipment over to {dropoffLabel}.",
-        $"Buyer signed off on the spot. Run it to {dropoffLabel}.",
-        $"Drop is green-lit. Deliver the load to {dropoffLabel}."
-    };
+                $"Buyer just confirmed the location. Deliver it to {dropoffLabel}.",
+                $"All right, buyer's locked in on the location. Get it to {dropoffLabel}.",
+                $"Route's live. Take the shipment over to {dropoffLabel}.",
+                $"Buyer signed off on the spot. Run it to {dropoffLabel}.",
+                $"Drop is green-lit. Deliver the load to {dropoffLabel}."
+            };
 
             int d = UnityEngine.Random.Range(0, dropoffLines.Length);
             Instance.SendTextMessage(dropoffLines[d]);
@@ -354,13 +355,67 @@ namespace WeaponShipments.NPCs
                 })
                 .WithSchedule(plan =>
                 {
-                    plan.WalkTo(spawnPos, 900, faceDestinationDir: true);
                 });
         }
 
         public Agent28() : base()
         {
         }
+
+        // --- Dialogue containers ---
+        private const string DEFAULT_CONTAINER = "Agent28_DefaultBusy";
+
+        // Prevent double-registration (important if NPC respawns / reloads)
+        private static bool _defaultDialogueRegistered = false;
+        private static bool _meetupDialogueRegistered = false;
+
+        private void RegisterDefaultDialogue()
+        {
+            if (_defaultDialogueRegistered)
+                return;
+
+            _defaultDialogueRegistered = true;
+
+            Dialogue.BuildAndRegisterContainer(DEFAULT_CONTAINER, c =>
+            {
+                c.AddNode("ENTRY", "I'm busy right now.", ch =>
+                {
+                    ch.Add("OK", "Alright.", "EXIT");
+                });
+
+                c.AddNode("EXIT", "");
+            });
+        }
+
+        private void ActivateDefaultDialogue()
+        {
+            RegisterDefaultDialogue();
+            Dialogue.UseContainerOnInteract(DEFAULT_CONTAINER);
+        }
+
+        private void ActivateMeetupDialogue()
+        {
+            RegisterMeetupDialogue();
+            Dialogue.UseContainerOnInteract(ACT0_CONTAINER);
+        }
+
+        // Quest-facing API (safe even if Instance is null)
+        public static void SetDefaultDialogueActive()
+        {
+            if (Instance == null)
+                return;
+
+            Instance.ActivateDefaultDialogue();
+        }
+
+        public static void SetMeetupDialogueActive()
+        {
+            if (Instance == null)
+                return;
+
+            Instance.ActivateMeetupDialogue();
+        }
+
         // --- Act 0: first meet / warehouse purchase ---
         private const string ACT0_CONTAINER = "Act0_Agent28_FirstMeet";
         private const string ACT0_CH_PAYNOW = "ACT0_PAY_NOW";
@@ -370,8 +425,13 @@ namespace WeaponShipments.NPCs
         // Tune these numbers (or pull from prefs/config later)
         private static int ACT0_WAREHOUSE_PRICE => BusinessConfig.WarehousePrice;
 
-        private void RegisterAct0FirstMeetDialogue()
+        private void RegisterMeetupDialogue()
         {
+            if (_meetupDialogueRegistered)
+                return;
+
+            _meetupDialogueRegistered = true;
+
             try
             {
                 int warehousePrice = BusinessConfig.WarehousePrice;
@@ -412,7 +472,7 @@ namespace WeaponShipments.NPCs
                             ch => ch.Add("ACT0_CONTINUE5", "So what’s the fix?", "FIX"));
 
                         c.AddNode("FIX",
-                            "Separation.\n" +
+                            "You need some separation.\n" +
                             "Different storage. Different routes. Different places. That’s where I come in\n" +
                             "Supplies are your problem. What happens after they arrive is mine.",
                             ch => ch.Add("ACT0_CONTINUE6", "Understood.", "WAREHOUSE_1"));
@@ -457,7 +517,7 @@ namespace WeaponShipments.NPCs
 
                         c.AddNode("COMPLETE",
                             "The Warehouse is secured.\n" +
-                            "You’ll need an employee on site to start turning supplies into stock.”");
+                            "You’ll need an employee on site to start turning supplies into stock.");
 
                         c.AddNode("EXIT",
                             "Then don’t stand here.\n" +
@@ -487,18 +547,16 @@ namespace WeaponShipments.NPCs
                     }
 
                     // Progress Act 0
-                    Act0ContactQuestManager.MetAgent();
+                    Act0ContactQuestManager.WaitForEmployee();
+                    QuestSaveDebug.Dump();
 
-                    SendTextMessage("");
-                    Dialogue.StopOverride();
+                    ActivateDefaultDialogue();
                     Dialogue.JumpTo(ACT0_CONTAINER, "COMPLETE");
                 });
-
-                Dialogue.UseContainerOnInteract(ACT0_CONTAINER);
             }
             catch (Exception ex)
             {
-                MelonLogger.Error($"[Act0] RegisterAct0FirstMeetDialogue failed: {ex}");
+                MelonLogger.Error($"[Act0] RegisterMeetupDialogue failed: {ex}");
                 if (ex.InnerException != null)
                     MelonLogger.Error($"[Act0] Inner: {ex.InnerException}");
             }
@@ -512,7 +570,7 @@ namespace WeaponShipments.NPCs
 
                 base.OnCreated();
                 Appearance.Build();
-                RegisterAct0FirstMeetDialogue();
+                ActivateDefaultDialogue();
 
                 Aggressiveness = 1f;
                 Region = Region.Northtown;
