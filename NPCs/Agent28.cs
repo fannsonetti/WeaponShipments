@@ -22,10 +22,6 @@ using WeaponShipments.Saveables;
 
 namespace WeaponShipments.NPCs
 {
-    /// <summary>
-    /// An example S1API NPC that opts into a physical rig.
-    /// Demonstrates movement and inventory usage.
-    /// </summary>
     public sealed partial class Agent28 : NPC
     {
         public static Agent28 Instance { get; private set; }
@@ -95,9 +91,6 @@ namespace WeaponShipments.NPCs
             Instance.SendTextMessage(lines[i]);
         }
 
-        /// <summary>
-        /// Called when a steal-supplies job is started and the pickup location is active.
-        /// </summary>
         public static void NotifyStealPickup(string pickupLocation)
         {
             if (Instance == null)
@@ -121,10 +114,6 @@ namespace WeaponShipments.NPCs
             Instance.SendTextMessage(lines[i]);
         }
 
-        /// <summary>
-        /// Intended for when the pickup is done and the player is sent to the dropoff.
-        /// Call this from your crate pickup logic when you swap to the delivery phase.
-        /// </summary>
         public static void NotifyStealDropoff(string dropoffLocation)
         {
             if (Instance == null)
@@ -162,7 +151,6 @@ namespace WeaponShipments.NPCs
             string dropoffLabel
         )
         {
-            // First text: where the shipment is, and what form it is in
             string[] crateLines =
             {
                 $"Shipment's sitting in a crate {spawnLabel}.",
@@ -195,11 +183,9 @@ namespace WeaponShipments.NPCs
 
             Instance.SendTextMessage(first);
 
-            // 6–8 second delay before the second text
             float delay = UnityEngine.Random.Range(6f, 8f);
             yield return new UnityEngine.WaitForSeconds(delay);
 
-            // Second text: buyer confirmed, tell them to deliver to dropoff
             string[] dropoffLines =
             {
                 $"Buyer just confirmed the location. Deliver it to {dropoffLabel}.",
@@ -241,13 +227,10 @@ namespace WeaponShipments.NPCs
 
         private static System.Collections.IEnumerator RaidMessageRoutine(float lostFraction, float lostValue)
         {
-            // 0–1 -> 1–100
             int percent = Mathf.Clamp(Mathf.RoundToInt(lostFraction * 100f), 1, 100);
 
-            // Convert to "k" value (e.g. 7800 -> 7.8k)
             float valueK = Mathf.Max(0f, lostValue / 1000f);
 
-            // --- Openers talking about % lost ---
             string[] percentLines =
             {
                 $"We just got hit. Around {percent}% of our stock is gone.",
@@ -257,7 +240,6 @@ namespace WeaponShipments.NPCs
                 $"{percent}% of what we had just vanished. Raid hit harder than expected."
             };
 
-            // --- Follow-ups talking about value lost ---
             string[] valueLines =
             {
                 $"Numbers came in... missing roughly {valueK:0.#}k worth.",
@@ -267,7 +249,6 @@ namespace WeaponShipments.NPCs
                 $"Call it {valueK:0.#}k gone, give or take."
             };
 
-            // --- Combined one-shot messages (% + value) ---
             string[] combinedLines =
             {
                 $"We got raided. Value loss is {valueK:0.#}k, around {percent}% gone.",
@@ -277,7 +258,6 @@ namespace WeaponShipments.NPCs
                 $"Summary: {percent}% of inventory, about {valueK:0.#}k, is off the books."
             };
 
-            // Decide: combined vs double-text
             bool combined = UnityEngine.Random.value < 0.4f; // ~40% of the time, single combined msg
 
             if (combined)
@@ -287,7 +267,6 @@ namespace WeaponShipments.NPCs
                 yield break;
             }
 
-            // Otherwise, two separate texts with delay
             int firstIndex = UnityEngine.Random.Range(0, percentLines.Length);
             Instance.SendTextMessage(percentLines[firstIndex]);
 
@@ -344,7 +323,6 @@ namespace WeaponShipments.NPCs
                         {
                             (DrugType.Marijuana, 0.65f), (DrugType.Cocaine, -0.3f)
                         })
-                        // .WithPreferredPropertiesById("Munchies", "Energizing", "Cyclopean");
                         .WithPreferredProperties(Property.Munchies, Property.AntiGravity, Property.BrightEyed);
                 })
                 .WithRelationshipDefaults(r =>
@@ -362,10 +340,8 @@ namespace WeaponShipments.NPCs
         {
         }
 
-        // --- Dialogue containers ---
         private const string DEFAULT_CONTAINER = "Agent28_DefaultBusy";
 
-        // Prevent double-registration (important if NPC respawns / reloads)
         private static bool _defaultDialogueRegistered = false;
         private static bool _meetupDialogueRegistered = false;
 
@@ -399,7 +375,6 @@ namespace WeaponShipments.NPCs
             Dialogue.UseContainerOnInteract(ACT0_CONTAINER);
         }
 
-        // Quest-facing API (safe even if Instance is null)
         public static void SetDefaultDialogueActive()
         {
             if (Instance == null)
@@ -416,13 +391,11 @@ namespace WeaponShipments.NPCs
             Instance.ActivateMeetupDialogue();
         }
 
-        // --- Act 0: first meet / warehouse purchase ---
         private const string ACT0_CONTAINER = "Act0_Agent28_FirstMeet";
         private const string ACT0_CH_PAYNOW = "ACT0_PAY_NOW";
         private const string ACT0_CH_NOTYET = "ACT0_NOT_YET";
         private const string ACT0_CH_LEAVE = "ACT0_LEAVE";
 
-        // Tune these numbers (or pull from prefs/config later)
         private static int ACT0_WAREHOUSE_PRICE => BusinessConfig.WarehousePrice;
 
         private void RegisterMeetupDialogue()
@@ -438,7 +411,6 @@ namespace WeaponShipments.NPCs
                 int signingBonus = BusinessConfig.SigningBonus;
                 int totalDue = warehousePrice + signingBonus;
 
-                // Prebuild the costs text as a plain string (no lambda overload).
                 string costsText =
                     "Paper trails matter. Mine is quieter than yours.\n\n" +
                     $"Warehouse: ${warehousePrice:N0}\n\n" +
@@ -525,10 +497,8 @@ namespace WeaponShipments.NPCs
                     }
                 });
 
-                // PAY callback
                 Dialogue.OnChoiceSelected(ACT0_CH_PAYNOW, () =>
                 {
-                    // Pull live values at click time (in case prefs changed)
                     int wPrice = BusinessConfig.WarehousePrice;
 
                     float balance = Money.GetCashBalance();
@@ -546,7 +516,6 @@ namespace WeaponShipments.NPCs
                         data.Properties.Warehouse.Owned = true;
                     }
 
-                    // Progress Act 0
                     Act0ContactQuestManager.WaitForEmployee();
                     QuestSaveDebug.Dump();
 

@@ -1,5 +1,4 @@
-﻿// Act0ContactQuest.cs
-using MelonLoader;
+﻿using MelonLoader;
 using S1API.GameTime;
 using S1API.Quests;
 using S1API.Saveables;
@@ -13,11 +12,8 @@ public class Act0ContactQuest : Quest
     protected override string Description => "A new opportunity has surfaced.";
     protected override bool AutoBegin => false;
 
-    // --- Persistence (WeaponShipmentsSaveData) ---
-    // Quest state is NOT saved through S1API's modded quest saver. Everything we need lives in WeaponShipmentsSaveData.
     private WeaponShipmentsSaveData.SavedAct0ContactQuest Saved => WeaponShipmentsSaveData.Instance?.Act0Contact;
 
-    // Local fallbacks (used only if SaveData is not yet available at runtime)
     private int _stageFallback = 0;
     private bool _awaitingWakeupFallback = false;
     private int _leadDayFallback = -1;
@@ -33,8 +29,6 @@ public class Act0ContactQuest : Quest
             _stageFallback = value;
         }
     }
-
-    // --- Time-gating state (Stage 2) ---
     private bool AwaitingWakeup
     {
         get => Saved != null ? Saved.AwaitingWakeup : _awaitingWakeupFallback;
@@ -92,33 +86,20 @@ public class Act0ContactQuest : Quest
 
     private bool _timeHooksAttached = false;
 
-    // Important: do NOT SaveableField this.
-    // We only need it for the load lifecycle decision.
     private bool _loadedFromSave = false;
 
-    /// <summary>
-    /// S1API load order (per your working quest pattern):
-    /// - Loaded quests: OnLoaded() first (QuestEntries already exist), then OnCreated()
-    /// - New quests: only OnCreated()
-    ///
-    /// Rule: OnLoaded should bind/create entries only. Do NOT call Begin/Complete/SetState here.
-    /// Let S1API restore state, then apply side-effects later.
-    /// </summary>
     protected override void OnLoaded()
     {
         base.OnLoaded();
 
         _loadedFromSave = true;
 
-        // If entries already exist, just bind our fields to them.
-        // If not, create them here so subsequent save/restore paths are consistent.
         if (QuestEntries.Count == 0)
         {
             CreateEntries();
         }
 
         RebindEntriesFromList();
-        // Do NOT Begin/Complete here; S1API state restoration handles that.
     }
 
     protected override void OnCreated()
@@ -127,34 +108,27 @@ public class Act0ContactQuest : Quest
 
         if (QuestEntries.Count == 0)
         {
-            // New quest path: entries do not exist yet.
             CreateEntries();
         }
 
-        // Loaded or new: ensure fields are bound.
         RebindEntriesFromList();
 
         AttachTimeHooksOnce();
 
         if (_loadedFromSave)
         {
-            // Critical: do NOT mutate quest/entry state (Begin/Complete/Complete()) here for loaded quests.
-            // Let S1API restore the states, then re-apply ONLY side-effects after restore finishes.
             MelonCoroutines.Start(ApplyStageSideEffectsNextFrame());
         }
         else
         {
-            // New quest path: internal stage machine can initialize state as needed.
             RestoreStageStateForNewQuestOnly();
         }
     }
 
     private void CreateEntries()
     {
-        // Entries match your naming and linear quest steps:
-        // AgentMeetup -> WaitForEmployee -> MannyMeetup -> HireArchie -> EquipmentSearch -> FoundEquipment
         AddEntry("Agent meetup (Black Market)", BlackMarketPos);
-        AddEntry("Wait for Agent 28 to find an employee");        // non-positional is OK in your environment
+        AddEntry("Wait for Agent 28 to find an employee");
         AddEntry("Manny meetup (Docks)", DocksPos);
         AddEntry("Hire Archie");
         AddEntry("Search for equipment", EquipmentPos);
@@ -162,7 +136,6 @@ public class Act0ContactQuest : Quest
 
     private void RebindEntriesFromList()
     {
-        // Maintain the exact same order as CreateEntries()
         if (QuestEntries.Count >= 1) _agentMeetupEntry = QuestEntries[0];
         if (QuestEntries.Count >= 2) _waitForEmployeeEntry = QuestEntries[1];
         if (QuestEntries.Count >= 3) _mannyMeetupEntry = QuestEntries[2];
@@ -180,18 +153,11 @@ public class Act0ContactQuest : Quest
         TimeManager.OnTick += OnTick;
     }
 
-    /// <summary>
-    /// For NEW quests only. This function can mutate quest/entry state.
-    /// For LOADED quests, do not call this during the load lifecycle.
-    /// </summary>
     private void RestoreStageStateForNewQuestOnly()
     {
-        // For a brand-new quest, stage should normally be 0 and we do nothing.
-        // Kept for completeness / dev tools if you ever set Stage via code.
         if (Stage == 0)
             return;
 
-        // Defensive: if entries failed to bind for any reason, avoid nulls.
         if (_agentMeetupEntry == null || _waitForEmployeeEntry == null || _mannyMeetupEntry == null ||
             _hireArchieEntry == null || _equipmentSearchEntry == null)
         {
@@ -199,7 +165,6 @@ public class Act0ContactQuest : Quest
             return;
         }
 
-        // If you ever force a non-zero stage on a newly created quest, this restores it.
         switch (Stage)
         {
             case 1:
@@ -252,16 +217,10 @@ public class Act0ContactQuest : Quest
         }
     }
 
-    /// <summary>
-    /// For LOADED quests only: re-apply ONLY side-effects that are not entry/quest state mutations.
-    /// We delay a frame so S1API's restore pass can complete before we touch anything.
-    /// </summary>
     private System.Collections.IEnumerator ApplyStageSideEffectsNextFrame()
     {
-        // allow S1API restore to finish
         yield return null;
 
-        // Defensive
         if (_agentMeetupEntry == null || _waitForEmployeeEntry == null || _mannyMeetupEntry == null ||
             _hireArchieEntry == null || _equipmentSearchEntry == null)
         {
@@ -269,11 +228,9 @@ public class Act0ContactQuest : Quest
             yield break;
         }
 
-        // Apply only "world" effects. Do NOT call Begin/Complete/Complete() here.
         switch (Stage)
         {
             case 0:
-                // nothing
                 break;
 
             case 1:
@@ -282,7 +239,6 @@ public class Act0ContactQuest : Quest
                 break;
 
             case 2:
-                // time hooks are already attached; leave the entries/state to S1API
                 break;
 
             case 3:
@@ -291,7 +247,6 @@ public class Act0ContactQuest : Quest
 
             case 4:
             case 5:
-                // no special world effects required here
                 break;
 
             case 6:
@@ -315,7 +270,6 @@ public class Act0ContactQuest : Quest
         Agent28.SetMeetupDialogueActive();
     }
 
-    // Step 2 (called when the Agent28 meetup dialogue completes)
     public void WaitForEmployee()
     {
         if (Stage != 1)
@@ -328,20 +282,17 @@ public class Act0ContactQuest : Quest
 
         Agent28.Instance?.SendTextMessage("I'll ask around for employees. Get some sleep.");
 
-        // Start the time-gated chain AFTER the next wakeup.
         AwaitingWakeup = true;
         LeadDay = -1;
         Sent1900 = false;
         Revealed2200 = false;
     }
 
-    // Step 3 (typically triggered automatically at 22:00 via OnTick)
     public void MannyMeetup()
     {
         if (Stage != 2)
             return;
 
-        // If you ever call this manually, ensure it doesn't double-trigger.
         if (Revealed2200)
             return;
 
@@ -359,13 +310,11 @@ public class Act0ContactQuest : Quest
         Stage = 3;
         _mannyMeetupEntry.Begin();
 
-        // Clear, non-accusatory reveal.
         Agent28.Instance?.SendTextMessage("Location: the docks. Go now.");
 
         TeleportMeetupNpcsToDocks();
     }
 
-    // Step 4 (call this when the player actually meets Manny / completes docks interaction)
     public void HireArchie()
     {
         if (Stage != 3)
@@ -377,7 +326,6 @@ public class Act0ContactQuest : Quest
         _hireArchieEntry.Begin();
     }
 
-    // Step 5 (call this when Archie is hired)
     public void EquipmentSearch()
     {
         if (Stage != 4)
@@ -389,7 +337,6 @@ public class Act0ContactQuest : Quest
         _equipmentSearchEntry.Begin();
     }
 
-    // Step 6 (final)
     public void FoundEquipment()
     {
         if (Stage != 5)

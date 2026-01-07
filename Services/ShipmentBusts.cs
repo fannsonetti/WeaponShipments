@@ -5,14 +5,13 @@ using S1API.Entities;
 using S1API.Law;
 using UnityEngine;
 using UnityEngine.AI;
-using WeaponShipments.Data;      // BusinessState
-using WeaponShipments.Services;  // ShipmentManager
+using WeaponShipments.Data;
+using WeaponShipments.Services;
 
 namespace WeaponShipments.NPCs
 {
     public static class ShipmentBusts
     {
-        // Hard-coded world spawn positions per Origin
         private static readonly Dictionary<string, Vector3[]> SpawnPositionsByOrigin =
             new Dictionary<string, Vector3[]>
             {
@@ -62,7 +61,6 @@ namespace WeaponShipments.NPCs
 
             string origin = shipment.Origin;
 
-            // No busts at Black Market
             if (origin == "Black Market")
             {
                 MelonLogger.Msg("[ShipmentBusts] Busts are disabled for Black Market shipments.");
@@ -76,13 +74,12 @@ namespace WeaponShipments.NPCs
                 return;
             }
 
-            // ---- Earnings-based difficulty ----
             float earnings = BusinessState.TotalEarnings;
 
             int minCops;
             int maxCops;
             PursuitLevel targetPursuitLevel;
-            float bustChance; // 0–1
+            float bustChance;
 
             if (earnings < WeaponShipmentsPrefs.BuyBustTier1MaxEarnings.Value)
             {
@@ -106,7 +103,6 @@ namespace WeaponShipments.NPCs
                 bustChance = WeaponShipmentsPrefs.BuyBustChanceTier3.Value;
             }
 
-            // 🎲 Bust percentage roll
             float roll = UnityEngine.Random.value; // 0–1
             if (roll > bustChance)
             {
@@ -114,20 +110,12 @@ namespace WeaponShipments.NPCs
                 return;
             }
 
-            // Apply wanted level via S1API LawManager
-            // Docs: LawManager.SetWantedLevel(Player target, PursuitLevel level) :contentReference[oaicite:2]{index=2}
             LawManager.SetWantedLevel(player, targetPursuitLevel);
             player.CrimeData.RecordLastKnownPosition(resetTimeSinceSighted: true);
             LawManager.CallPolice(player);
 
             MelonLogger.Msg($"[ShipmentBusts] Set wanted level to {targetPursuitLevel} (earnings={earnings}).");
 
-            // Optional: dispatch additional police from nearest station (commented out to avoid double-spawn
-            // if you're already teleporting existing officers).
-            // Docs: LawManager.CallPolice(Player target) :contentReference[oaicite:3]{index=3}
-            // LawManager.CallPolice(player);
-
-            // Find all officer gameobjects
             List<GameObject> officers = FindAllOfficers();
             if (officers.Count == 0)
             {
@@ -135,8 +123,7 @@ namespace WeaponShipments.NPCs
                 return;
             }
 
-            // Cop count from configured min/max, but only clamp against number of officers
-            int desired = UnityEngine.Random.Range(minCops, maxCops + 1); // inclusive max
+            int desired = UnityEngine.Random.Range(minCops, maxCops + 1);
             int numToSpawn = Mathf.Min(desired, officers.Count);
 
             if (numToSpawn <= 0)
@@ -153,16 +140,13 @@ namespace WeaponShipments.NPCs
                 if (officer == null)
                     continue;
 
-                // Disable NavMeshAgent before teleport
                 var agent = officer.GetComponent<NavMeshAgent>();
                 if (agent != null && agent.enabled)
                     agent.enabled = false;
 
-                // Multiple cops can use same spot: random spawn every time
                 int spIndex = UnityEngine.Random.Range(0, spawnPoints.Length);
                 Vector3 targetPos = spawnPoints[spIndex];
 
-                // Face the player
                 Vector3 toPlayer = playerPos - targetPos;
                 toPlayer.y = 0f;
                 if (toPlayer.sqrMagnitude < 0.001f)
@@ -179,9 +163,6 @@ namespace WeaponShipments.NPCs
             MelonLogger.Msg($"[ShipmentBusts] Spawned {numToSpawn} officers (desired {desired}) for earnings={earnings}.");
         }
 
-        /// <summary>
-        /// Finds ALL GameObjects with "officer" in their name.
-        /// </summary>
         private static List<GameObject> FindAllOfficers()
         {
             var list = new List<GameObject>();

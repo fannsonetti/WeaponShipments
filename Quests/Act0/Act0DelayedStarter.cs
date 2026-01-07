@@ -14,7 +14,6 @@ public static class Act0DelayedStarter
 
     private static IEnumerator StartRoutine()
     {
-        // Hard wait: 30 seconds
         yield return new WaitForSeconds(20f);
 
         var data = WeaponShipmentsSaveData.Instance?.Data;
@@ -34,7 +33,6 @@ public static class Act0DelayedStarter
 
         UnknownContact.Instance.SendIntro();
 
-        // Warp Agent 28 for the meet
         WarpAgent28GameObject();
 
         MelonLogger.Msg("[Act0] Contact quest started after fixed delay.");

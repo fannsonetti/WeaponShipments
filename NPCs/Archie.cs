@@ -77,27 +77,16 @@ namespace CustomNPCTest.NPCs
                         .LocationDialogue(posA, 1300)
                         .UseVendingMachine(1400)
                         .StayInBuilding(northApartments, 1425, 60)
-                        // .DriveToCarParkByName(ParkingLots.Get<ManorParking>().GameObjectName, "shitbox", 1500, ParkingAlignment.FrontToKerb);
-                        // .DriveToCarPark(ParkingLots.Get<ManorParking>(), new LandVehicle("shitbox"), 1500);
                         .DriveToCarParkWithCreateVehicle(manorParking.GameObjectName, "cheetah",
                             1550, new Vector3(-66.189f, -3.025f, 124.795f), Quaternion.Euler(0f, 90f, 0f), ParkingAlignment.FrontToKerb);
                 })
                 .WithInventoryDefaults(inv =>
                 {
-                    // Startup items that will always be in inventory when spawned
                     inv.WithStartupItems("banana", "baseballbat", "cuke")
-                        // Random cash between $50 and $500
                         .WithRandomCash(min: 50, max: 500)
-                        // Preserve inventory across sleep cycles
                         .WithClearInventoryEachNight(false);
                 });
         }
-
-        /*
-        public ExamplePhysicalNPC1() : base()
-        {
-        }
-        */
 
         protected override void OnCreated()
         {
@@ -142,7 +131,6 @@ namespace CustomNPCTest.NPCs
                 });
 
                 Dialogue.OnNodeDisplayed("INFO_NODE", () => {
-                    // Ran when "Get scammed nerd." is shown
                 });
 
                 Dialogue.OnChoiceSelected("BYE", () =>
@@ -154,8 +142,6 @@ namespace CustomNPCTest.NPCs
                 Dialogue.UseContainerOnInteract("AlexShop");
                 Aggressiveness = 3f;
                 Region = Region.Northtown;
-
-                // Customer.RequestProduct();
 
                 Schedule.Enable();
             }

@@ -28,7 +28,6 @@ namespace WeaponShipments
             if (_bunkerRequested)
                 return;
 
-            // Replace "Main" with your actual gameplay scene name.
             if (scene.name == "Main")
             {
                 _bunkerRequested = true;
@@ -53,7 +52,6 @@ namespace WeaponShipments
 
         private static IEnumerator InitAct0WhenReady()
         {
-            // Wait until the local player exists (strong proxy for S1API readiness)
             float timeout = 30f;
             while (Player.Local == null && timeout > 0f)
             {
@@ -67,15 +65,12 @@ namespace WeaponShipments
                 yield break;
             }
 
-            // Extra safety: wait one more frame after player exists
             yield return null;
 
             MelonLogger.Msg("[Act0] S1API appears ready. Creating quest + starting delayed Act0.");
 
-            // NOW it is safe to create quests
             Act0ContactQuestManager.Initialize();
 
-            // Your existing delayed-start logic
             Act0DelayedStarter.Start();
         }
 
