@@ -310,21 +310,21 @@ namespace WeaponShipments.NPCs
                 .WithSpawnPosition(spawnPos)
                 .WithCustomerDefaults(cd =>
                 {
-                    cd.WithSpending(minWeekly: 500f, maxWeekly: 1500f)
-                        .WithOrdersPerWeek(2, 4)
+                    cd.WithSpending(minWeekly: 1f, maxWeekly: 1f)
+                        .WithOrdersPerWeek(1, 1)
                         .WithPreferredOrderDay(Day.Saturday)
-                        .WithOrderTime(1100)
-                        .WithStandards(CustomerStandard.High)
+                        .WithOrderTime(0500)
+                        .WithStandards(CustomerStandard.VeryHigh)
                         .AllowDirectApproach(true)
-                        .GuaranteeFirstSample(true)
-                        .WithMutualRelationRequirement(minAt50: 2.5f, maxAt100: 4.0f)
-                        .WithCallPoliceChance(0.15f)
-                        .WithDependence(baseAddiction: 0.25f, dependenceMultiplier: 1.1f)
+                        .GuaranteeFirstSample(false)
+                        .WithMutualRelationRequirement(minAt50: 5.0f, maxAt100: 5.0f)
+                        .WithCallPoliceChance(0.0f)
+                        .WithDependence(baseAddiction: 0.0f, dependenceMultiplier: 0.0f)
                         .WithAffinities(new[]
                         {
-                            (DrugType.Marijuana, 0.65f), (DrugType.Cocaine, -0.3f)
+                            (DrugType.Marijuana, -1f), (DrugType.Methamphetamine, -1f), (DrugType.Shrooms, -1), (DrugType.Cocaine, -1f)
                         })
-                        .WithPreferredProperties(Property.Munchies, Property.AntiGravity, Property.BrightEyed);
+                        .WithPreferredProperties();
                 })
                 .WithRelationshipDefaults(r =>
                 {
@@ -518,7 +518,6 @@ namespace WeaponShipments.NPCs
                     }
 
                     Act0ContactQuestManager.WaitForEmployee();
-                    QuestSaveDebug.Dump();
 
                     ActivateDefaultDialogue();
                     Dialogue.JumpTo(ACT0_CONTAINER, "COMPLETE");

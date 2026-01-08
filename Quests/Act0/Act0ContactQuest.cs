@@ -1,10 +1,12 @@
-﻿using MelonLoader;
+﻿using CustomNPCTest.NPCs;
+using MelonLoader;
 using S1API.GameTime;
 using S1API.Quests;
 using S1API.Saveables;
 using UnityEngine;
-using WeaponShipments.NPCs;
+using UnityEngine.AI;
 using WeaponShipments.Data;
+using WeaponShipments.NPCs;
 
 namespace WeaponShipments.Quests
 {
@@ -129,9 +131,9 @@ namespace WeaponShipments.Quests
 
         private void CreateEntries()
         {
-            AddEntry("Agent meetup (Black Market)", BlackMarketPos);
+            AddEntry("Meet the Unknown Contact.", BlackMarketPos);
             AddEntry("Wait for Agent 28 to find an employee");
-            AddEntry("Manny meetup (Docks)", DocksPos);
+            AddEntry("Meet up with Manny", DocksPos);
             AddEntry("Hire Archie");
             AddEntry("Search for equipment", EquipmentPos);
         }
@@ -257,7 +259,6 @@ namespace WeaponShipments.Quests
             }
         }
 
-        // Step 1
         public void AgentMeetup()
         {
             if (Stage != 0)
@@ -282,7 +283,7 @@ namespace WeaponShipments.Quests
             Stage = 2;
             _waitForEmployeeEntry.Begin();
 
-            Agent28.Instance?.SendTextMessage("I'll ask around for employees. Get some sleep.");
+            Agent28.Instance?.SendTextMessage("I'll ask around for employees.");
 
             AwaitingWakeup = true;
             LeadDay = -1;
@@ -300,6 +301,7 @@ namespace WeaponShipments.Quests
 
             Revealed2200 = true;
             DoMannyMeetupReveal();
+            Manny.SetMeetupDialogueActive();
         }
 
         private void DoMannyMeetupReveal()
@@ -312,8 +314,8 @@ namespace WeaponShipments.Quests
             Stage = 3;
             _mannyMeetupEntry.Begin();
 
-            Agent28.Instance?.SendTextMessage("Location: the docks. Go now.");
-
+            Agent28.Instance?.SendTextMessage("Meet him behind Randy's shop.");
+            Manny.SetMeetupDialogueActive();
             TeleportMeetupNpcsToDocks();
         }
 
@@ -326,6 +328,8 @@ namespace WeaponShipments.Quests
 
             Stage = 4;
             _hireArchieEntry.Begin();
+
+            Archie.SetMeetupDialogueActive();
         }
 
         public void EquipmentSearch()
@@ -374,17 +378,16 @@ namespace WeaponShipments.Quests
             if (LeadDay < 0)
                 return;
 
-            // Only run on the day we anchored to wakeup
             if (TimeManager.ElapsedDays != LeadDay)
                 return;
 
-            int t = TimeManager.CurrentTime; // e.g. 1900, 2200
+            int t = TimeManager.CurrentTime;
 
             if (!Sent1900 && t >= 1900)
             {
                 Sent1900 = true;
                 Agent28.Instance?.SendTextMessage(
-                    "Manny’s set for 22:00. I’ll text you the location at 22:00. Be ready to move."
+                    "Manny knows someone looking for work. I'll text you the location at 22:00. Be ready."
                 );
                 return;
             }
@@ -398,58 +401,37 @@ namespace WeaponShipments.Quests
 
         private static void WarpAgent28ToBlackMarket()
         {
-            // IMPORTANT: This is an offset from BlackMarketPos (not absolute coords).
-            // Tweak as needed for staging.
             Vector3 pos = BlackMarketPos;
             Quaternion rot = Quaternion.Euler(0f, 20f, 0f);
 
-            WarpNpcGameObjectByName("Agent 28", pos, rot, logTag: "[Act0] Warp Agent28 -> BlackMarket");
+            WarpNpcGameObjectByName("Agent 28", pos, rot, logTag: "Agent28 warped");
         }
 
         private void TeleportMeetupNpcsToDocks()
         {
-            Vector3 agentPos = DocksPos + new Vector3(0.6f, 0f, 0.2f);
-            Vector3 mannyPos = DocksPos + new Vector3(-0.6f, 0f, -0.2f);
-            Quaternion faceRot = Quaternion.Euler(0f, 180f, 0f);
+            Vector3 archiePos = new Vector3(-97.7585f, -2.5f, -37.1382f);
+            Vector3 mannyPos = new Vector3(-98.5142f, -2.5f, -36.5701f);
+            Vector3 igorPos = new Vector3(-98.8593f, -2.5f, -36f);
+            Quaternion faceRot = Quaternion.Euler(0f, 200f, 0f);
+            Quaternion archieRot = Quaternion.Euler(0f, 240f, 0f);
 
-            WarpNpcGameObjectByName("Archie", agentPos, faceRot, logTag: "[Act0] Warp Agent28 -> Docks");
-            WarpNpcGameObjectByName("Manny", mannyPos, faceRot, logTag: "[Act0] Warp Manny -> Docks");
+            WarpNpcGameObjectByName("ArchieWS", archiePos, archieRot, logTag: "Archie warped");
+            WarpNpcGameObjectByName("MannyWS", mannyPos, faceRot, logTag: "Manny warped");
+            WarpNpcGameObjectByName("IgorWS", igorPos, faceRot, logTag: "Igor warped");
         }
 
         private static void WarpNpcGameObjectByName(string exactName, Vector3 pos, Quaternion rot, string logTag)
         {
-            // Diagnostic so we can prove what name is being searched at runtime
-            MelonLogger.Msg($"{logTag}: Looking for EXACT GameObject '{exactName}' (must have child 'Avatar')");
-
             var target = GameObject.Find(exactName);
 
-            if (target == null)
-            {
-                MelonLogger.Warning($"{logTag} failed: GameObject '{exactName}' not found.");
-                return;
-            }
-
-            if (!HasAvatarChild(target))
-            {
-                MelonLogger.Warning($"{logTag} failed: '{exactName}' found ('{target.name}') but has no child named 'Avatar'.");
-                return;
-            }
+            var agent = target.GetComponent<NavMeshAgent>();
+            if (agent != null && agent.enabled)
+                agent.enabled = false;
 
             target.transform.position = pos;
             target.transform.rotation = rot;
 
             MelonLogger.Msg($"{logTag}: Warped '{target.name}' to {pos}.");
-        }
-
-        private static bool HasAvatarChild(GameObject root)
-        {
-            var transforms = root.GetComponentsInChildren<Transform>(true); // includes inactive
-            foreach (var t in transforms)
-            {
-                if (t != null && t.name == "Avatar")
-                    return true;
-            }
-            return false;
         }
     }
 }

@@ -26,8 +26,6 @@ namespace WeaponShipments.UI
     {
         public static WeaponShipmentApp Instance { get; private set; }
 
-
-
         private static bool _conversionRoutineStarted;
         private static bool _raidRoutineStarted;
 

@@ -10,7 +10,7 @@
 
 	<!-- Define paths for different configurations -->
 	<PropertyGroup Condition="'$(Configuration)'=='Mono'">
-		<GamePath>C:\Projects\s1\branches\v0.4.2f9\Alternate Mono</GamePath>
+		<GamePath>D:\Schedule 1 Dependencies\Mono</GamePath>
 		<ManagedPath>$(GamePath)\Schedule I_Data\Managed</ManagedPath>
 		<MelonLoaderPath>$(GamePath)\MelonLoader\net35</MelonLoaderPath>
 		<ModsPath>$(GamePath)\Mods</ModsPath>
@@ -19,7 +19,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Il2cpp'">
-		<GamePath>C:\Projects\s1\branches\v0.4.2f9\Main ll2Cpp</GamePath>
+		<GamePath>D:\Schedule 1 Dependencies\Il2cpp</GamePath>
 		<ManagedPath>$(GamePath)\MelonLoader\Il2CppAssemblies</ManagedPath>
 		<MelonLoaderPath>$(GamePath)\MelonLoader\net6</MelonLoaderPath>
 		<ModsPath>$(GamePath)\Mods</ModsPath>
@@ -28,7 +28,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='CrossCompat'">
-		<GamePath>C:\Projects\s1\branches\v0.4.2f9\Alternate Mono</GamePath>
+		<GamePath>D:\Schedule 1 Dependencies\Mono</GamePath>
 		<ManagedPath>$(GamePath)\Schedule I_Data\Managed</ManagedPath>
 		<MelonLoaderPath>$(GamePath)\MelonLoader\net35</MelonLoaderPath>
 		<ModsPath>$(GamePath)\Mods</ModsPath>
@@ -46,7 +46,7 @@
 	<PropertyGroup>
 		<UseLocalS1API>true</UseLocalS1API>
 		<!-- Update this path to point to your local S1API DLL -->
-		<S1APILocalPath>C:\Projects\s1\S1API\S1API\bin\MonoMelon\netstandard2.1\S1API.dll</S1APILocalPath>
+		<S1APILocalPath>D:\Schedule 1 Dependencies\S1API\S1API.dll</S1APILocalPath>
 	</PropertyGroup>
 
 	<!-- Mono references -->
@@ -207,6 +207,7 @@
 		</Reference>
 	</ItemGroup>
 	<ItemGroup>
+		<Compile Include="NPCs\Igor.cs" />
 		<Compile Include="NPCs\Manny.cs" />
 		<Compile Include="NPCs\Archie.cs" />
 		<Compile Include="NPCs\UnknownContact.cs" />
@@ -215,7 +216,6 @@
 		<Compile Include="Core.cs" />
 		<Compile Include="Data\BusinessConfig.cs" />
 		<Compile Include="Quests\Act0\Act0DelayedStarter.cs" />
-		<Compile Include="Quests\Act0\QuestSaveDebus.cs" />
 		<Compile Include="Saveables\SavedProperties.cs" />
 		<Compile Include="Saveables\SavedStats.cs" />
 		<Compile Include="Saveables\SavedStock.cs" />

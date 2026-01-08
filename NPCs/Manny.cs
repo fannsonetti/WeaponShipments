@@ -1,19 +1,22 @@
 ﻿using MelonLoader;
-using S1API.Entities;
-using S1API.Entities.Schedule;
-using S1API.Map;
-using S1API.Map.ParkingLots;
-using S1API.Money;
 using S1API.Economy;
+using S1API.Entities;
 using S1API.Entities.NPCs.Northtown;
+using S1API.Entities.Schedule;
 using S1API.GameTime;
 using S1API.Growing;
+using S1API.Map;
 using S1API.Map.Buildings;
+using S1API.Map.ParkingLots;
+using S1API.Money;
 using S1API.Products;
 using S1API.Properties;
 using S1API.Vehicles;
-using UnityEngine;
 using System.Linq;
+using UnityEngine;
+using WeaponShipments.Data;
+using WeaponShipments.Quests;
+using static MelonLoader.MelonLogger;
 
 namespace CustomNPCTest.NPCs
 {
@@ -24,133 +27,217 @@ namespace CustomNPCTest.NPCs
     public sealed class Manny : NPC
     {
         public override bool IsPhysical => true;
+        public static Manny Instance { get; private set; }
 
         protected override void ConfigurePrefab(NPCPrefabBuilder builder)
         {
             var manorParking = ParkingLotRegistry.Get<ManorParking>();
             var northApartments = Building.Get<NorthApartments>();
             MelonLogger.Msg("Configuring prefab for NPC 1");
-            Vector3 posA = new Vector3(-28.060f, 1.065f, 62.070f);
-            Vector3 spawnPos = new Vector3(-55.5701f, 1.065f, 67.7955f);
+            Vector3 spawnPos = new Vector3(-36.5022f, 1.89f, 26.8121f);
             builder.WithIdentity("MannyWS", "Manny", "")
                 .WithAppearanceDefaults(av =>
                 {
                     av.Gender = 0.0f;
-                    av.Height = 1.0f;
-                    av.Weight = 0.68f;
-                    var skinColor = new Color(0.61f, 0.49f, 0.39f);
+                    av.Height = 1.04f;
+                    av.Weight = 0.625f;
+                    var skinColor = new Color(0.4018f, 0.3207f, 0.2549f);
                     av.SkinColor = skinColor;
                     av.LeftEyeLidColor = av.SkinColor;
                     av.RightEyeLidColor = av.SkinColor;
                     av.EyeBallTint = Color.white;
-                    av.PupilDilation = 0.75f;
-                    av.EyebrowScale = 1.22f;
-                    av.EyebrowThickness = 1.45f;
-                    av.EyebrowRestingHeight = -0.3f;
-                    av.EyebrowRestingAngle = 1.75f;
-                    av.LeftEye = (0.18f, 0.5f);
-                    av.RightEye = (0.18f, 0.5f);
-                    av.HairColor = new Color(0.31f, 0.2f, 0.12f);
-                    av.HairPath = "Avatar/Hair/Peaked/Peaked";
+                    av.PupilDilation = 0.6844f;
+                    av.EyebrowScale = 1.35f;
+                    av.EyebrowThickness = 1.62f;
+                    av.EyebrowRestingHeight = -0.6313f;
+                    av.EyebrowRestingAngle = 0f;
+                    av.LeftEye = (0.2469f, 0.3344f);
+                    av.RightEye = (0.2469f, 0.3344f);
+                    av.HairColor = new Color(0.2453f, 0.1921f, 0.14f);
                     av.WithFaceLayer("Avatar/Layers/Face/Face_NeutralPout", Color.black);
-                    av.WithFaceLayer("Avatar/Layers/Face/FacialHair_Goatee", new Color(0.31f, 0.2f, 0.12f));
-                    av.WithBodyLayer("Avatar/Layers/Top/Tucked T-Shirt", new Color(0.151f, 0.151f, 0.151f));
-                    av.WithBodyLayer("Avatar/Layers/Bottom/CargoPants", new Color(0.151f, 0.151f, 0.151f));
-                    av.WithAccessoryLayer("Avatar/Accessories/Waist/Belt/Belt", new Color(0.151f, 0.151f, 0.151f));
-                    av.WithAccessoryLayer("Avatar/Accessories/Feet/CombatBoots/CombatBoots", new Color(0.151f, 0.151f, 0.151f));
-                    av.WithAccessoryLayer("Avatar/Accessories/Head/Oakleys/Oakleys", new Color(0.151f, 0.151f, 0.151f));
+                    av.WithFaceLayer("Avatar/Layers/Face/OldPersonWrinkles", new Color32(0, 0, 0, 1));
+                    av.WithFaceLayer("Avatar/Layers/Face/FacialHair_Goatee", new Color(0.2453f, 0.1921f, 0.14f));
+                    av.WithBodyLayer("Avatar/Layers/Top/T-Shirt", new Color(0.151f, 0.151f, 0.151f));
+                    av.WithBodyLayer("Avatar/Layers/Bottom/Jeans", new Color(0.151f, 0.151f, 0.151f));
+                    av.WithAccessoryLayer("Avatar/Accessories/Chest/Blazer/Blazer", new Color(0.3864f, 0.2881f, 0.5268f));
+                    av.WithAccessoryLayer("Avatar/Accessories/Feet/DressShoes/DressShoes", new Color(0.0179f, 0.0134f, 0.0134f));
                 })
                 .WithSpawnPosition(spawnPos)
+                .WithCustomerDefaults(cd =>
+                {
+                    cd.WithSpending(minWeekly: 1f, maxWeekly: 1f)
+                        .WithOrdersPerWeek(1, 1)
+                        .WithPreferredOrderDay(Day.Saturday)
+                        .WithOrderTime(0500)
+                        .WithStandards(CustomerStandard.VeryHigh)
+                        .AllowDirectApproach(true)
+                        .GuaranteeFirstSample(false)
+                        .WithMutualRelationRequirement(minAt50: 5.0f, maxAt100: 5.0f)
+                        .WithCallPoliceChance(0.0f)
+                        .WithDependence(baseAddiction: 0.0f, dependenceMultiplier: 0.0f)
+                        .WithAffinities(new[]
+                        {
+                            (DrugType.Marijuana, -1f), (DrugType.Methamphetamine, -1f), (DrugType.Shrooms, -1), (DrugType.Cocaine, -1f)
+                        })
+                        .WithPreferredProperties();
+                })
                 .WithRelationshipDefaults(r =>
                 {
-                    r.WithDelta(1.5f)
+                    r.WithDelta(5.0f)
                         .SetUnlocked(false)
-                        .SetUnlockType(NPCRelationship.UnlockType.DirectApproach)
-                        .WithConnections<KyleCooley, LudwigMeyer, AustinSteiner>();
+                        .SetUnlockType(NPCRelationship.UnlockType.DirectApproach);
                 })
                 .WithSchedule(plan =>
                 {
-                })
-                .WithInventoryDefaults(inv =>
-                {
-                    // Startup items that will always be in inventory when spawned
-                    inv.WithStartupItems("banana", "baseballbat", "cuke")
-                        // Random cash between $50 and $500
-                        .WithRandomCash(min: 50, max: 500)
-                        // Preserve inventory across sleep cycles
-                        .WithClearInventoryEachNight(false);
-                });
+                }
+                );
         }
 
-        /*
         public Manny() : base()
         {
         }
-        */
+
+        private const string DEFAULT_CONTAINER = "Manny_DefaultBusy";
+
+        private static bool _defaultDialogueRegistered = false;
+        private static bool _meetupDialogueRegistered = false;
+
+        private void RegisterDefaultDialogue()
+        {
+            if (_defaultDialogueRegistered)
+                return;
+
+            _defaultDialogueRegistered = true;
+
+            Dialogue.BuildAndRegisterContainer(DEFAULT_CONTAINER, c =>
+            {
+                c.AddNode("ENTRY", "I'm busy right now.", ch =>
+                {
+                    ch.Add("OK", "Alright.", "EXIT");
+                });
+
+                c.AddNode("EXIT", "");
+            });
+        }
+
+        private void ActivateDefaultDialogue()
+        {
+            RegisterDefaultDialogue();
+            Dialogue.UseContainerOnInteract(DEFAULT_CONTAINER);
+        }
+
+        private void ActivateMeetupDialogue()
+        {
+            RegisterMeetupDialogue();
+            Dialogue.UseContainerOnInteract(ACT0_CONTAINER);
+        }
+
+        public static void SetDefaultDialogueActive()
+        {
+            if (Instance == null)
+                return;
+
+            Instance.ActivateDefaultDialogue();
+        }
+
+        public static void SetMeetupDialogueActive()
+        {
+            if (Instance == null)
+                return;
+
+            Instance.ActivateMeetupDialogue();
+        }
+
+        private const string ACT0_CONTAINER = "Act0_Manny_FirstMeet";
+
+        private static int ACT0_WAREHOUSE_PRICE => BusinessConfig.WarehousePrice;
+
+        private void RegisterMeetupDialogue()
+        {
+            if (_meetupDialogueRegistered)
+                return;
+
+            _meetupDialogueRegistered = true;
+
+            try
+            {
+                int warehousePrice = BusinessConfig.WarehousePrice;
+                int signingBonus = BusinessConfig.SigningBonus;
+                int totalDue = warehousePrice + signingBonus;
+
+                Dialogue.BuildAndRegisterContainer(ACT0_CONTAINER, c =>
+                {
+                    {
+                        c.AddNode("ENTRY",
+                            "Agent told me your looking for someone to manufacture weapons.",
+                            ch =>
+                            {
+                                ch.Add("ACT0_CONTINUE", "Yeah, im assuming you know someone.", "SEPARATION_1");
+                            });
+
+                        c.AddNode("SEPARATION_1",
+                            "Yes i do, this guy is very experienced.",
+                            ch => ch.Add("ACT0_CONTINUE3", "How come?", "SEPARATION_2"));
+
+                        c.AddNode("SEPARATION_2",
+                            "He worked for the Benzies for 6 years",
+                            ch => ch.Add("ACT0_CONTINUE4", "Why did they just let him go?", "SEPARATION_3"));
+
+                        c.AddNode("SEPARATION_3",
+                            "They didnt. He's on the run and needs some place to stay. \n" +
+                            "That means he keeps his head down and does the work.",
+                            ch => ch.Add("ACT0_CONTINUE5", "And that's him?", "REFERRAL_1"));
+
+                        c.AddNode("REFERRAL_1",
+                            "Yeah. If you're serious, talk to him. Not me.",
+                            ch => ch.Add("ACT0_HANDOFF", "Alright. I'll talk to him.", "HANDOFF_1"));
+
+                        c.AddNode("HANDOFF_1",
+                            "Just remember, he doesn't like his time wasted.");
+                    }
+                });
+
+                Dialogue.OnChoiceSelected("ACT0_HANDOFF", () =>
+                {
+                    Act0ContactQuestManager.HireArchie();
+                    ActivateDefaultDialogue();
+                });
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error($"[Act0] RegisterMeetupDialogue failed: {ex}");
+                if (ex.InnerException != null)
+                    MelonLogger.Error($"[Act0] Inner: {ex.InnerException}");
+            }
+        }
+
+        private const string GO_NAME = "MannyWS";
+
+        private void RenameSpawnedGameObject()
+        {
+            if (gameObject != null && gameObject.name != GO_NAME)
+                gameObject.name = GO_NAME;
+        }
 
         protected override void OnCreated()
         {
             try
             {
+                Instance = this;
+
                 base.OnCreated();
+                RenameSpawnedGameObject();
                 Appearance.Build();
+                ActivateDefaultDialogue();
 
-                SendTextMessage("Hello from physical NPC 1!");
-
-                Dialogue.BuildAndSetDatabase(db => {
-                    db.WithModuleEntry("Reactions", "GREETING", "Welcome.");
-                });
-                Dialogue.BuildAndRegisterContainer("AlexShop", c => {
-                    c.AddNode("ENTRY", "Want some info for $100?", ch => {
-                        ch.Add("PAY_FOR_INFO", "Pay $100", "INFO_NODE")
-                            .Add("NO_THANKS", "No thanks", "EXIT");
-                    });
-                    c.AddNode("INFO_NODE", "Get scammed nerd.", ch => {
-                        ch.Add("BYE", "Thanks", "EXIT");
-                    });
-                    c.AddNode("NOT_ENOUGH", "You don't have enough cash.", ch => {
-                        ch.Add("BACK", "I'll come back.", "ENTRY");
-                    });
-                    c.AddNode("EXIT", "See you.");
-                });
-
-                Dialogue.OnChoiceSelected("PAY_FOR_INFO", () =>
-                {
-                    const float price = 100f;
-                    var balance = Money.GetCashBalance();
-                    if (balance >= price)
-                    {
-                        Money.ChangeCashBalance(-price, visualizeChange: true, playCashSound: true);
-                        Dialogue.JumpTo("AlexShop", "INFO_NODE");
-                    }
-                    else
-                    {
-                        Dialogue.JumpTo("AlexShop", "NOT_ENOUGH");
-                    }
-
-                });
-
-                Dialogue.OnNodeDisplayed("INFO_NODE", () => {
-                    // Ran when "Get scammed nerd." is shown
-                });
-
-                Dialogue.OnChoiceSelected("BYE", () =>
-                {
-                    Dialogue.StopOverride();
-                    SendTextMessage("You got scammed");
-                });
-
-                Dialogue.UseContainerOnInteract("AlexShop");
-                Aggressiveness = 3f;
+                Aggressiveness = 1f;
                 Region = Region.Northtown;
-
-                // Customer.RequestProduct();
 
                 Schedule.Enable();
             }
             catch (Exception ex)
             {
-                MelonLogger.Error($"ExamplePhysicalNPC OnCreated failed: {ex.Message}");
+                MelonLogger.Error($"Manny OnCreated failed: {ex.Message}");
                 MelonLogger.Error($"StackTrace: {ex.StackTrace}");
             }
         }

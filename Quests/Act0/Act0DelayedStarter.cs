@@ -35,50 +35,7 @@ namespace WeaponShipments.Quests
 
             UnknownContact.Instance.SendIntro();
 
-            WarpAgent28GameObject();
-
             MelonLogger.Msg("[Act0] Contact quest started after fixed delay.");
-        }
-
-        private static void WarpAgent28GameObject()
-        {
-            Vector3 pos = new Vector3(-48.5173f, -2.1f, 40.4007f);
-            Quaternion rot = Quaternion.Euler(0f, 200f, 0f);
-
-            GameObject target = null;
-
-            string[] candidates = { "Agent28", "Agent 28", "Agent28(Clone)" };
-            foreach (var name in candidates)
-            {
-                target = GameObject.Find(name);
-                if (target != null)
-                    break;
-            }
-
-            if (target == null)
-            {
-                foreach (var go in UnityEngine.Object.FindObjectsOfType<GameObject>())
-                {
-                    if (go == null) continue;
-                    var n = go.name?.ToLowerInvariant();
-                    if (n != null && (n.Contains("agent28") || n.Contains("agent 28")))
-                    {
-                        target = go;
-                        break;
-                    }
-                }
-            }
-
-            if (target == null)
-            {
-                MelonLogger.Warning("[Act0] Could not find Agent 28 GameObject to warp.");
-                return;
-            }
-
-            target.transform.position = pos;
-            target.transform.rotation = rot;
-
-            MelonLogger.Msg($"[Act0] Warped Agent 28 GO '{target.name}'.");
         }
     }
 }
