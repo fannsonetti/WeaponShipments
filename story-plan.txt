@@ -1,0 +1,160 @@
+Got it — thanks for calling that out. I’ll keep the **exact same quest setup format** we were using before and only change **Act 2’s contents**, not the structure or tone.
+
+Below is the **corrected version**, slotting your new idea cleanly into the existing framework.
+
+---
+
+# FINAL MAIN QUEST STRUCTURE (CORRECTED)
+
+---
+
+## **Act 1 — Quest 1**
+
+### **New Number, New Problems**
+
+**What happens**
+
+* You receive a message from an unknown number
+* You agree to work with him
+* Agent 28 contacts you from his real phone
+* You meet him in the black market
+* Property ownership is unlocked
+
+**Why it works**
+
+* Clear inciting incident
+* Introduces Agent 28 properly
+* Ends with a permanent system unlock
+
+---
+
+## **Act 2 — Quest 2**
+
+### **Starting Small** *(Reworked, same format)*
+
+**What happens**
+
+* You are told to find **one person you can trust**
+* You hire **Archie**:
+
+  * Main weapon maker
+  * Former cartel worker
+* Archie explains you don’t have the equipment needed to actually make anything
+* He tells you the cartel controls local supply
+* Archie gives you the location of a **cartel manor**
+* You raid the manor and **steal a truck full of weapon-manufacturing equipment**
+* You deliver the truck back to the warehouse
+
+**State change**
+
+* Weapon manufacturing is unlocked
+* The cartel is now implicitly introduced into the story
+
+**Why it works**
+
+* Act 2 now has real action and consequence
+* Archie is narratively important before his death
+* The cartel is seeded early without forcing a war
+
+---
+
+## **Act 3 — Quest 3**
+
+### **Unpacking**
+
+**What happens**
+
+* You go to the warehouse when you are ready
+* You unpack everything out of the van onto the floor
+
+**Why it works**
+
+* Clear transitional moment after delivery
+* Sets up production readiness
+
+---
+
+## **Act 4 — Quest 4**
+
+### **Moving Up**
+
+**What happens**
+
+* The warehouse reaches its limits
+* You move operations to the garage
+* Production increases significantly
+* Things feel stable and efficient
+
+**Why it works**
+
+* Clear sense of growth
+* Sets up false security before the fall
+
+---
+
+## **Act 5 — Quest 5**
+
+### **Burned**
+
+**What happens**
+
+* A full police task force raids the garage
+* This is not a normal raid
+* The garage is permanently seized
+* **Archie is killed** while covering your escape
+
+**State change**
+
+* You lose your main base
+* You lose your weapon maker
+* This is irreversible
+
+**Why it works**
+
+* Major emotional and mechanical pivot
+* Justifies the bunker as a necessity
+
+---
+
+## **Act 6 — Quest 6**
+
+### **Taking Control**
+
+**What happens**
+
+* Agent 28 reveals the weapons-smuggling bunker
+* He explains it’s owned by the same cartel
+* Branch check:
+
+  * If the cartel is already defeated → proceed
+  * If not → defeat the cartel first
+* You raid the bunker
+* You clear it and claim it as your new base
+
+
+## **Act 7 — Quest 7**
+
+### **No Going Back**
+
+**What happens**
+
+* You establish bunker operations
+* Agent 28 confirms the new reality:
+
+  * No permanent surface bases
+* You fully commit to operating underground
+
+
+## FINAL QUEST LIST (LOCKED)
+
+1. **New Number, New Problems**
+2. **Starting Small**
+3. **Unpacking**
+4. **Moving Up**
+5. **Burned**
+6. **Taking Control**
+7. **No Going Back**
+
+## DO NOT COPY THIS 1:1, THIS IS A PROOF OF CONCEPT AND ANYTHING WE ADD TO THE QUEST NEEDS TO BE RUN BY ME
+## DO NOT COPY THIS 1:1, THIS IS A PROOF OF CONCEPT AND ANYTHING WE ADD TO THE QUEST NEEDS TO BE RUN BY ME
+## DO NOT COPY THIS 1:1, THIS IS A PROOF OF CONCEPT AND ANYTHING WE ADD TO THE QUEST NEEDS TO BE RUN BY ME

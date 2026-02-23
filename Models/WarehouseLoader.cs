@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Reflection;
 using MelonLoader;
 using UnityEngine;
@@ -11,6 +11,8 @@ namespace WeaponShipments
     {
         private const string WAREHOUSE_RESOURCE_NAME = "WeaponShipments.warehouse";
         private static bool _loaded;
+
+        public static void ResetLoaded() => _loaded = false;
 
         public static void LoadWarehouseAdditiveOnce()
         {
@@ -74,9 +76,9 @@ namespace WeaponShipments
                 // --------------------------------------------------
                 // Transform (your values)
                 // --------------------------------------------------
-                inst.transform.position = new Vector3(-27.85f, -2.515f, 173.558f);
+                inst.transform.position = new Vector3(-29.5682f, -4.2f, 173.538f);
                 inst.transform.rotation = Quaternion.Euler(270f, 270f, 0f);
-                inst.transform.localScale = new Vector3(430f, 575f, 250f);
+                inst.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
 
                 // --------------------------------------------------
                 // Fix shaders/materials for runtime

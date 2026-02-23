@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using S1API.Economy;
 using S1API.Entities;
 using S1API.Entities.NPCs.Northtown;
@@ -34,7 +34,7 @@ namespace CustomNPCTest.NPCs
             var manorParking = ParkingLotRegistry.Get<ManorParking>();
             var northApartments = Building.Get<NorthApartments>();
             MelonLogger.Msg("Configuring prefab for NPC 1");
-            Vector3 spawnPos = new Vector3(-36.5022f, 1.89f, 26.8121f);
+            Vector3 spawnPos = new Vector3(0f, 500f, 0f);
             builder.WithIdentity("MannyWS", "Manny", "")
                 .WithAppearanceDefaults(av =>
                 {
@@ -199,7 +199,7 @@ namespace CustomNPCTest.NPCs
 
                 Dialogue.OnChoiceSelected("ACT0_HANDOFF", () =>
                 {
-                    Act0ContactQuestManager.HireArchie();
+                    QuestManager.HireArchie();
                     ActivateDefaultDialogue();
                 });
             }

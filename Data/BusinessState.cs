@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -87,6 +87,22 @@ namespace WeaponShipments.Data
             _stockByProperty[p] = Mathf.Max(0f, v);
         }
 
+        /// <summary>For console commands: set supplies/stock by property name.</summary>
+        public static bool SetSuppliesForProperty(PropertyType p, float v)
+        {
+            SetSupplies(p, v);
+            SyncToSaveable();
+            return true;
+        }
+
+        /// <summary>For console commands: set stock by property name.</summary>
+        public static bool SetStockForProperty(PropertyType p, float v)
+        {
+            SetStock(p, v);
+            SyncToSaveable();
+            return true;
+        }
+
         public static float Supplies => GetSupplies(ActiveProperty);
         public static float Stock => GetStock(ActiveProperty);
 
@@ -94,7 +110,7 @@ namespace WeaponShipments.Data
 
         private static void SyncToSaveable()
         {
-            var save = WeaponShipmentsSaveData.Instance;
+            var save = WSSaveData.Instance;
             var data = save != null ? save.Data : null;
             if (data == null)
                 return;
@@ -401,6 +417,29 @@ namespace WeaponShipments.Data
             SyncToSaveable();
         }
 
+        /// <summary>For console/debug: set stats directly.</summary>
+        public static void SetTotalEarnings(float v) { _totalEarnings = Mathf.Max(0f, v); SyncToSaveable(); }
+        public static void SetTotalSalesCount(int v) { _totalSalesCount = Mathf.Max(0, v); SyncToSaveable(); }
+        public static void SetTotalStockProduced(float v) { _totalStockProduced = Mathf.Max(0f, v); SyncToSaveable(); }
+        public static void SetResupplyJobsStarted(int v) { _resupplyJobsStarted = Mathf.Max(0, v); SyncToSaveable(); }
+        public static void SetResupplyJobsCompleted(int v) { _resupplyJobsCompleted = Mathf.Max(0, v); SyncToSaveable(); }
+        public static void SetHylandSellAttempts(int v) { _hylandSellAttempts = Mathf.Max(0, v); SyncToSaveable(); }
+        public static void SetHylandSellSuccesses(int v) { _hylandSellSuccesses = Mathf.Max(0, v); SyncToSaveable(); }
+
+        /// <summary>For console/debug: set property owned.</summary>
+        public static void SetPropertyOwned(PropertyType p, bool owned)
+        {
+            var data = WSSaveData.Instance?.Data;
+            if (data == null) return;
+            switch (p)
+            {
+                case PropertyType.Warehouse: data.Properties.Warehouse.Owned = owned; break;
+                case PropertyType.Garage: data.Properties.Garage.Owned = owned; break;
+                case PropertyType.Bunker: data.Properties.Bunker.Owned = owned; break;
+            }
+            MelonLogger.Msg("[BusinessState] {0} Owned = {1}", p, owned);
+        }
+
         // ---------------- 
 
         // ---------------- COMPAT / UI-EXPECTED API ----------------
@@ -533,7 +572,7 @@ namespace WeaponShipments.Data
         }
         // ---------------- LOAD HOOK ----------------
 
-        internal static void ApplyLoadedData(WeaponShipmentsSaveData.PersistedData data)
+        internal static void ApplyLoadedData(WSSaveData.PersistedData data)
         {
             if (data == null)
                 return;

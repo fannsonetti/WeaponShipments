@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Reflection;
 using MelonLoader;
 using UnityEngine;
@@ -11,6 +11,8 @@ namespace WeaponShipments
     {
         private const string TERRAIN_RESOURCE_NAME = "WeaponShipments.terrain";
         private static bool _loaded;
+
+        public static void ResetLoaded() => _loaded = false;
 
         public static void LoadTerrainAdditiveOnce()
         {

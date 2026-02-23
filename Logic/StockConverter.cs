@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using System.Collections;
 using UnityEngine;
 using WeaponShipments.Data;
@@ -31,9 +31,13 @@ namespace WeaponShipments.Logic
 
         private static void ConvertOneSupply()
         {
+            // Weapon manufacturing only runs after Quest 2 completes (deliver truck to warehouse).
+            var data = WSSaveData.Instance?.Data;
+            if (data == null || !data.Properties.Warehouse.SetupComplete)
+                return;
+
             // Note: BusinessState routes Supplies/Stock to the currently active property storage.
             // Caps are enforced inside BusinessState (and/or via BusinessConfig.GetMax* calls there).
-
             float suppliesCost = 1f;
 
             if (!BusinessState.TryConsumeSupplies(suppliesCost))

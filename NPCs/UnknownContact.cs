@@ -1,4 +1,4 @@
-﻿using S1API.Entities;
+using S1API.Entities;
 using S1API.Messaging;
 using UnityEngine;
 using WeaponShipments.Quests;
@@ -56,7 +56,7 @@ namespace WeaponShipments.NPCs
             {
                 Label = "ok_response",
                 Text = "Don’t waste my time.",
-                OnTriggered = () => Act0ContactQuestManager.AgentMeetup(),
+                OnTriggered = () => QuestManager.AgentMeetup(),
             };
 
             SendTextMessage(
@@ -68,7 +68,7 @@ namespace WeaponShipments.NPCs
             public void SendWho()
         {
             SendTextMessage("Thats none of your concern.");
-            Act0ContactQuestManager.AgentMeetup();
+            QuestManager.AgentMeetup();
         }
     }
 }

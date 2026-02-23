@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using S1API.Economy;
 using S1API.Entities;
 using S1API.Entities.NPCs.Northtown;
@@ -38,7 +38,7 @@ namespace CustomNPCTest.NPCs
             var northApartments = Building.Get<NorthApartments>();
             MelonLogger.Msg("Configuring prefab for NPC 1");
             Vector3 posA = new Vector3(-28.060f, 1.065f, 62.070f);
-            Vector3 spawnPos = new Vector3(-53.5701f, 1.065f, 67.7955f);
+            Vector3 spawnPos = new Vector3(0f, 500f, 0f);
             builder.WithIdentity("ArchieWS", "Archie", "")
                 .WithAppearanceDefaults(av =>
                 {
@@ -159,7 +159,7 @@ namespace CustomNPCTest.NPCs
         private const string ACT0_CH_NOTYET = "ACT0_NOT_YET";
         private const string ACT0_CH_LEAVE = "ACT0_LEAVE";
 
-        private static int ACT0_WAREHOUSE_PRICE => BusinessConfig.WarehousePrice;
+        private static int ACT0_SIGNING_BONUS => BusinessConfig.SigningBonus;
 
         private void RegisterMeetupDialogue()
         {
@@ -195,11 +195,11 @@ namespace CustomNPCTest.NPCs
                             ch => ch.Add("ACT0_CONTINUE5", "Where would i find them?", "SEPARATION_4"));
 
                         c.AddNode("SEPARATION_4",
-                            "The Veepers should be ready in the Manor at 3:00",
+                            "The Veepers should be ready in the Manor at 2:00",
                             ch => ch.Add("ACT0_CONTINUE6", "I can get in no problem.", "PAYMENT_1"));
 
                         c.AddNode("PAYMENT_1",
-                            $"Ok good. but i dont work for free, i need ${ACT0_WAREHOUSE_PRICE:N0} upfront",
+                            $"Ok good. but i dont work for free, i need ${ACT0_SIGNING_BONUS:N0} upfront",
                             ch =>
                             {
                                 ch.Add(ACT0_CH_PAYNOW, "Pay now.", "COMPLETE");
@@ -232,13 +232,7 @@ namespace CustomNPCTest.NPCs
 
                     Money.ChangeCashBalance(-wPrice, visualizeChange: true, playCashSound: true);
 
-                    var data = WeaponShipmentsSaveData.Instance?.Data;
-                    if (data != null)
-                    {
-                        data.Properties.Warehouse.Owned = true;
-                    }
-
-                    Act0ContactQuestManager.EquipmentSearch();
+                    QuestManager.CompleteHireArchie();
 
                     ActivateDefaultDialogue();
                     Dialogue.JumpTo(ACT0_CONTAINER, "COMPLETE");

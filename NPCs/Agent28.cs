@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using S1API.Economy;
 using S1API.Entities;
 using S1API.Entities.NPCs.Northtown;
@@ -144,6 +144,12 @@ namespace WeaponShipments.NPCs
                 return;
 
             MelonCoroutines.Start(SellJobMessageRoutine(spawnLabel, isVehicle, dropoffLabel));
+        }
+
+        private static System.Collections.IEnumerator DeferredWarehouseDoorReplaceCoroutine()
+        {
+            yield return null;
+            WarehouseDoorReplacer.TryReplaceWarehouseDoor();
         }
 
         private static System.Collections.IEnumerator SellJobMessageRoutine(
@@ -392,6 +398,63 @@ namespace WeaponShipments.NPCs
             Instance.ActivateMeetupDialogue();
         }
 
+        private static bool _warehouseDialogueRegistered = false;
+        private const string WAREHOUSE_CONTAINER = "Agent28_Warehouse_StartAct2";
+
+        public static void SetWarehouseDialogueActive()
+        {
+            if (Instance == null)
+                return;
+
+            Instance.RegisterWarehouseDialogue();
+            Instance.ActivateWarehouseDialogue();
+        }
+
+        public static void SetDialogueFromWarehouseState()
+        {
+            if (Instance == null) return;
+            var p = WSPersistent.Instance?.Data;
+            if (p != null && p.AwaitingWarehouseTalk)
+                SetWarehouseDialogueActive();
+            else
+                SetDefaultDialogueActive();
+        }
+
+        private void RegisterWarehouseDialogue()
+        {
+            if (_warehouseDialogueRegistered)
+                return;
+
+            _warehouseDialogueRegistered = true;
+
+            Dialogue.BuildAndRegisterContainer(WAREHOUSE_CONTAINER, c =>
+            {
+                c.AddNode("ENTRY",
+                    "The warehouse is yours. I've got someone in mind for the crew – I'll reach out when I have details.",
+                    ch =>
+                    {
+                        ch.Add("START", "Let's get started.", "EXIT");
+                    });
+                c.AddNode("EXIT", "");
+            });
+
+            Dialogue.OnChoiceSelected("START", () =>
+            {
+                var p = WSPersistent.Instance?.Data;
+                if (p != null) p.AwaitingWarehouseTalk = false;
+
+                WeaponShipments.Quests.QuestManager.PurchaseWarehouse();
+                ActivateDefaultDialogue();
+                MelonLogger.Msg("[Agent28] Warehouse dialogue – Act 2 started.");
+            });
+        }
+
+        private void ActivateWarehouseDialogue()
+        {
+            RegisterWarehouseDialogue();
+            Dialogue.UseContainerOnInteract(WAREHOUSE_CONTAINER);
+        }
+
         private const string ACT0_CONTAINER = "Act0_Agent28_FirstMeet";
         private const string ACT0_CH_PAYNOW = "ACT0_PAY_NOW";
         private const string ACT0_CH_NOTYET = "ACT0_NOT_YET";
@@ -489,8 +552,8 @@ namespace WeaponShipments.NPCs
                             "When you’re ready to move, you know where to find me.");
 
                         c.AddNode("COMPLETE",
-                            "The Warehouse is secured.\n" +
-                            "You’ll need an employee on site to start turning supplies into stock.");
+                            "The warehouse is secured.\n" +
+                            "Go get some rest. I'll handle the paperwork. Come see me at the warehouse once you're up.");
 
                         c.AddNode("EXIT",
                             "Then don’t stand here.\n" +
@@ -498,10 +561,16 @@ namespace WeaponShipments.NPCs
                     }
                 });
 
+                // Pay for warehouse in dialogue: completes Quest 1 and starts Quest 2 (same as before).
                 Dialogue.OnChoiceSelected(ACT0_CH_PAYNOW, () =>
                 {
-                    int wPrice = BusinessConfig.WarehousePrice;
+                    var data = WSSaveData.Instance?.Data;
+                    if (data == null)
+                        return;
+                    if (data.Properties.Warehouse.Owned)
+                        return;
 
+                    int wPrice = BusinessConfig.WarehousePrice;
                     float balance = Money.GetCashBalance();
                     if (balance < wPrice)
                     {
@@ -510,14 +579,11 @@ namespace WeaponShipments.NPCs
                     }
 
                     Money.ChangeCashBalance(-wPrice, visualizeChange: true, playCashSound: true);
+                    data.Properties.Warehouse.Owned = true;
 
-                    var data = WeaponShipmentsSaveData.Instance?.Data;
-                    if (data != null)
-                    {
-                        data.Properties.Warehouse.Owned = true;
-                    }
+                    MelonCoroutines.Start(DeferredWarehouseDoorReplaceCoroutine());
 
-                    Act0ContactQuestManager.WaitForEmployee();
+                    WeaponShipments.Quests.QuestManager.CompleteDialogueAndUnlockProperty();
 
                     ActivateDefaultDialogue();
                     Dialogue.JumpTo(ACT0_CONTAINER, "COMPLETE");

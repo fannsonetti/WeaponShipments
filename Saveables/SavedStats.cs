@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace WeaponShipments.Saveables
 {
@@ -14,8 +14,5 @@ namespace WeaponShipments.Saveables
 
         public int HylandSellAttempts = 0;
         public int HylandSellSuccesses = 0;
-
-        public bool Act0Started = false;
-        public bool Act0ContactCompleted = false;
     }
 }

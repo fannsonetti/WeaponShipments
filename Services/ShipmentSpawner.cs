@@ -1,4 +1,4 @@
-﻿// Full ShipmentSpawner.cs with Coupe vehicle detection and renaming
+// Full ShipmentSpawner.cs with Coupe vehicle detection and renaming
 // Supports old S1API (no VehicleObject, no ActiveVehicles)
 // Delivery minigame uses a vehicle identified by renaming the spawned GameObject.
 
@@ -23,6 +23,7 @@ namespace WeaponShipments.Services
         private static GameObject _templateCrate;
 
         private static bool _sellJobActive;
+        private static bool _sellJobUsedWarehouseVeeper;
         private static string _sellVehicleGuid;
         private static GameObject _sellVehicleObject;
         private static GameObject _sellArea;
@@ -412,6 +413,7 @@ namespace WeaponShipments.Services
             }
 
             _sellJobActive = true;
+            _sellJobUsedWarehouseVeeper = false;
             _sellVehicleObject = null;
             _sellCrateObject = null;
             _sellVehiclePrefabName = null;
@@ -422,23 +424,23 @@ namespace WeaponShipments.Services
 
             bool isVehicleJob;
 
-            // -------------------------
-            // DELIVERY TIERS
-            // -------------------------
+            var data = WSSaveData.Instance?.Data;
+            bool useWarehouseVeeper = data != null && data.Properties.Warehouse.SetupComplete;
+
             if (stockAmount <= 5.26f)
             {
                 isVehicleJob = false;
                 SpawnSellCrateJob(stockAmount, payout, sp.Position, sp.Rotation);
             }
-            else if (stockAmount <= 21.01f)
+            else if (useWarehouseVeeper && WarehouseVeeperManager.GetWarehouseVeeper() != null)
             {
                 isVehicleJob = true;
-                SpawnSellVehicleJob(stockAmount, payout, vehicleCode: "Shitbox", prefabName: "Shitbox", spawnPosition: sp.Position, spawnRotation: sp.Rotation);
-            }
-            else if (stockAmount <= 63.01f)
-            {
-                isVehicleJob = true;
-                SpawnSellVehicleJob(stockAmount, payout, vehicleCode: "Bruiser", prefabName: "SUV", spawnPosition: sp.Position, spawnRotation: sp.Rotation);
+                _sellJobUsedWarehouseVeeper = true;
+                WarehouseVeeperManager.PrepareForSellJob(sp.Position, sp.Rotation);
+                var wv = WarehouseVeeperManager.GetWarehouseVeeper();
+                _sellVehicleObject = wv != null && wv.transform.root != null ? wv.transform.root.gameObject : wv;
+                _sellVehiclePrefabName = "Van";
+                MelonLogger.Msg("[ShipmentSpawner] Sell job using warehouse Veeper for {0} stock -> ${1:N0}.", stockAmount, payout);
             }
             else
             {
@@ -485,17 +487,19 @@ namespace WeaponShipments.Services
                 // Case 2: vehicle job
                 if (!isCorrectCarrier && _sellVehicleObject != null)
                 {
-                    if (go == _sellVehicleObject || go.transform.IsChildOf(_sellVehicleObject.transform))
+                    if (go == _sellVehicleObject || (_sellVehicleObject != null && go.transform.IsChildOf(_sellVehicleObject.transform)))
                     {
                         isCorrectCarrier = true;
 
-                        // Optional: get vehicle and un-own/brick it
-                        var vehicle = VehicleRegistry.GetByName(_sellVehicleObject.name);
-                        if (vehicle != null)
+                        if (!_sellJobUsedWarehouseVeeper)
                         {
-                            vehicle.IsPlayerOwned = false;
-                            vehicle.TopSpeed = 0f;
-                            vehicle.VehiclePrice = 0f;
+                            var vehicle = VehicleRegistry.GetByName(_sellVehicleObject.name);
+                            if (vehicle != null)
+                            {
+                                vehicle.IsPlayerOwned = false;
+                                vehicle.TopSpeed = 0f;
+                                vehicle.VehiclePrice = 0f;
+                            }
                         }
                     }
                 }
@@ -510,6 +514,7 @@ namespace WeaponShipments.Services
                 Money.ChangeCashBalance(_payout);
                 BusinessState.RegisterSale(_payout, true);
                 BusinessState.ClearSellJobFlag();
+                WeaponShipments.Quests.QuestManager.TryStartAct3IfEligible();
 
                 // Tell Agent 28 – Hyland is the only target for now
                 Agent28.NotifySellReport(
@@ -531,12 +536,16 @@ namespace WeaponShipments.Services
                     _sellCrateObject = null;
                 }
 
-                // Remove the vehicle after 60 seconds (if this was a vehicle job)
-                if (_sellVehicleObject != null)
+                // Return warehouse Veeper or destroy spawned vehicle
+                if (_sellJobUsedWarehouseVeeper)
+                {
+                    WarehouseVeeperManager.ReturnAfterSellJob();
+                }
+                else if (_sellVehicleObject != null)
                 {
                     Object.Destroy(_sellVehicleObject, 180f);
-                    _sellVehicleObject = null;
                 }
+                _sellVehicleObject = null;
 
                 // Remove the delivery trigger/area right away
                 Object.Destroy(this.gameObject);

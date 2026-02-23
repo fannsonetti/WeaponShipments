@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace WeaponShipments.Saveables
@@ -18,6 +18,9 @@ namespace WeaponShipments.Saveables
     {
         public bool Owned = false;
         public bool Compromised = false;
+
+        /// <summary>Set when Quest 2 completes; gates supplies→stock conversion.</summary>
+        public bool SetupComplete = false;
 
         public List<WarehouseShipment> PendingShipments = new List<WarehouseShipment>();
     }

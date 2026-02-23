@@ -563,7 +563,7 @@ namespace WeaponShipments.UI
 
         private bool IsPropertyOwned(BusinessState.PropertyType property)
         {
-            var data = WeaponShipmentsSaveData.Instance?.Data;
+            var data = WSSaveData.Instance?.Data;
             if (data == null)
                 return false;
 
@@ -578,7 +578,7 @@ namespace WeaponShipments.UI
 
         private bool IsPropertyCompromised(BusinessState.PropertyType property)
         {
-            var data = WeaponShipmentsSaveData.Instance?.Data;
+            var data = WSSaveData.Instance?.Data;
             if (data == null)
                 return false;
 
@@ -1033,7 +1033,7 @@ namespace WeaponShipments.UI
             {
                 try
                 {
-                    var save = WeaponShipmentsSaveData.Instance;
+                    var save = WSSaveData.Instance;
                     var data = save != null ? save.Data : null;
 
                     if (data != null)
@@ -1558,8 +1558,10 @@ namespace WeaponShipments.UI
             if (currentStock < BusinessConfig.RaidMinStockToTrigger)
                 return;
 
-            // Stock fullness 0–1
-            float fullness = currentStock / BusinessConfig.GetMaxStock(BusinessState.ActiveProperty);
+            // Stock fullness 0–1 (guard against division by zero)
+            float maxStock = BusinessConfig.GetMaxStock(BusinessState.ActiveProperty);
+            if (maxStock <= 0f) return;
+            float fullness = currentStock / maxStock;
 
             // Base chance scales with how full the warehouse is
             float chance = BusinessConfig.RaidBaseChance * fullness;
@@ -2844,7 +2846,7 @@ namespace WeaponShipments.UI
             }
 
             // Get save data
-            var save = WeaponShipmentsSaveData.Instance;
+            var save = WSSaveData.Instance;
             var data = save != null ? save.Data : null;
             if (data == null)
             {

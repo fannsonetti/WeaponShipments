@@ -1,0 +1,52 @@
+---
+description: Lightweight project rules for Weapon Shipments mod
+alwaysApply: true
+---
+
+# Cursor Project Rules (Lightweight)
+
+## Scope
+
+* Only implement what I ask for.
+* Don't build future features unless requested.
+* If something feels out of scope, ask first.
+
+## Files
+
+* Prefer editing or renaming existing files.
+* If you think a new file is needed, briefly explain why before creating it.
+* Don't create lots of small files for minor features.
+
+## Renames
+
+* If something is being renamed, just rename it and update references.
+* Don't rewrite working logic unless you're asked.
+
+## Player-Facing Content
+
+* No "Act 1/Act 2" labels in UI or dialogue.
+* Only quest names and objectives should be visible to players.
+* Keep UI text clean and intentional.
+
+## Flow Rules (Project-Specific)
+
+* Warehouse cannot be purchased before Quest 1 is complete.
+* Property ownership unlock comes from the Agent 28 quest.
+* No warehouse purchase card unless explicitly requested.
+* Weapon manufacturing must remain locked until the proper quest unlocks it.
+
+## When Unsure
+
+* Ask instead of guessing.
+* Keep changes minimal.
+* Avoid silent architectural changes.
+
+## S1API
+
+* Always use the [IfBars S1API fork](https://github.com/ifBars/S1API). Reference the local DLL from the fork, not the original KaBooMa/Official package.
+
+## Output Preference
+
+* Briefly explain what files you're touching.
+* Keep explanations short.
+* Don't over-explain.

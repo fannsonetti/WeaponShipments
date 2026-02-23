@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -69,6 +69,9 @@
 		<Reference Include="UnityEngine.CoreModule">
 			<HintPath>$(ManagedPath)\UnityEngine.CoreModule.dll</HintPath>
 		</Reference>
+		<Reference Include="UnityEngine.IMGUIModule">
+			<HintPath>$(ManagedPath)\UnityEngine.IMGUIModule.dll</HintPath>
+		</Reference>
 		<Reference Include="UnityEngine.JSONSerializeModule">
 			<HintPath>$(ManagedPath)\UnityEngine.JSONSerializeModule.dll</HintPath>
 		</Reference>
@@ -119,6 +122,9 @@
 		</Reference>
 		<Reference Include="UnityEngine.CoreModule">
 			<HintPath>$(ManagedPath)\UnityEngine.CoreModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.IMGUIModule">
+			<HintPath>$(ManagedPath)\UnityEngine.IMGUIModule.dll</HintPath>
 		</Reference>
 		<Reference Include="UnityEngine.JSONSerializeModule">
 			<HintPath>$(ManagedPath)\UnityEngine.JSONSerializeModule.dll</HintPath>
@@ -175,6 +181,9 @@
 		<Reference Include="UnityEngine.CoreModule">
 			<HintPath>$(ManagedPath)\UnityEngine.CoreModule.dll</HintPath>
 		</Reference>
+		<Reference Include="UnityEngine.IMGUIModule">
+			<HintPath>$(ManagedPath)\UnityEngine.IMGUIModule.dll</HintPath>
+		</Reference>
 		<Reference Include="UnityEngine.JSONSerializeModule">
 			<HintPath>$(ManagedPath)\UnityEngine.JSONSerializeModule.dll</HintPath>
 		</Reference>
@@ -211,26 +220,38 @@
 		<Compile Include="NPCs\Manny.cs" />
 		<Compile Include="NPCs\Archie.cs" />
 		<Compile Include="NPCs\UnknownContact.cs" />
-		<Compile Include="Quests\Act0\Act0ContactQuest.cs" />
-		<Compile Include="Quests\Act0\Act0ContactQuestManager.cs" />
+		<Compile Include="Quests\Act1\Act1NewNumber.cs" />
+		<Compile Include="Quests\QuestManager.cs" />
+		<Compile Include="Quests\Act2\Act2StartingSmall.cs" />
+		<Compile Include="Quests\Act3\Act3MovingUp.cs" />
+		<Compile Include="Quests\Act3\Act3Unpacking.cs" />
 		<Compile Include="Core.cs" />
 		<Compile Include="Data\BusinessConfig.cs" />
-		<Compile Include="Quests\Act0\Act0DelayedStarter.cs" />
 		<Compile Include="Saveables\SavedProperties.cs" />
 		<Compile Include="Saveables\SavedStats.cs" />
 		<Compile Include="Saveables\SavedStock.cs" />
 		<Compile Include="Data\WeaponShipmentsPrefs.cs" />
-		<Compile Include="Data\WeaponShipmentsSaveData.cs" />
+		<Compile Include="Data\WSSaveData.cs" />
+		<Compile Include="Data\WSPersistent.cs" />
 		<Compile Include="Logic\SellCalculator.cs" />
 		<Compile Include="Logic\StockConverter.cs" />
 		<Compile Include="Models\TerrainLoader.cs" />
 		<Compile Include="Models\GarageLoader.cs" />
 		<Compile Include="NPCs\Agent28.cs" />
+		<Compile Include="NPCs\NorthWarehouseLandlord.cs" />
+		<Compile Include="NPCs\Mechanic.cs" />
 		<Compile Include="Models\WarehouseLoader.cs" />
+		<Compile Include="Models\WarehouseDoorReplacer.cs" />
+		<Compile Include="Models\WarehouseEquipmentSetup.cs" />
+		<Compile Include="Services\CameraOcclusionZone.cs" />
+		<Compile Include="Services\WarehouseVeeperManager.cs" />
 		<Compile Include="Services\ShipmentBusts.cs" />
 		<Compile Include="Services\ShipmentProximityDetector.cs" />
 		<Compile Include="Services\ShipmentSpawner.cs" />
+		<Compile Include="Services\MovingUpEquipmentInteractables.cs" />
 		<Compile Include="Utils\Constants.cs" />
+		<Compile Include="Utils\WSConsoleCommand.cs" />
+		<Compile Include="Utils\WSDebugMenu.cs" />
 		<Compile Include="UI\WeaponShipmentApp.cs" />
 		<Compile Include="Services\ShipmentManager.cs" />
 		<Compile Include="Data\BusinessState.cs" />
