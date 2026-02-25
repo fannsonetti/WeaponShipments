@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 
 namespace WeaponShipments.Data
 {
@@ -11,6 +11,7 @@ namespace WeaponShipments.Data
         public static MelonPreferences_Entry<int> WarehousePrice;
         public static MelonPreferences_Entry<int> SigningBonus;
         public static MelonPreferences_Entry<int> GaragePrice;
+        public static MelonPreferences_Entry<int> MovingUpMinEarnings;
 
         // ---------------- STOCK SUPPLIES ----------------
         public static MelonPreferences_Entry<int> MaxSupplies;
@@ -88,9 +89,16 @@ namespace WeaponShipments.Data
 
             GaragePrice = _category.CreateEntry(
                 "GaragePrice",
-                35000,
+                25000,
                 "Garage Price",
                 "The price required to buy the Garage"
+            );
+
+            MovingUpMinEarnings = _category.CreateEntry(
+                "MovingUpMinEarnings",
+                15000,
+                "Moving Up Min Earnings",
+                "Minimum total earnings before Moving Up quest can start."
             );
 
             // ---------------- CORE LIMITS ----------------
@@ -110,14 +118,14 @@ namespace WeaponShipments.Data
 
             WarehouseMaxSupplies = _category.CreateEntry(
                 "WarehouseMaxSupplies",
-                5,
+                8,
                 "Warehouse Max Supplies",
                 "Maximum supplies storage for Warehouse."
             );
 
             WarehouseMaxStock = _category.CreateEntry(
                 "WarehouseMaxStock",
-                10,
+                16,
                 "Warehouse Max Stock",
                 "Maximum stock storage for Warehouse."
             );

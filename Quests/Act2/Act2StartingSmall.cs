@@ -27,6 +27,7 @@ namespace WeaponShipments.Quests
         protected override string Title => "Starting Small";
         protected override string Description => "Get your first base and start production.";
         protected override bool AutoBegin => false;
+        protected override Sprite? QuestIcon => WeaponShipments.Utils.QuestIconLoader.Load("quest_starting_small.png");
 
         private WSSaveData.SavedStartingSmallQuest Saved => WSSaveData.Instance?.StartingSmallQuest;
         private WSPersistent.PersistedData P => WSPersistent.Instance?.Data;
@@ -797,6 +798,7 @@ namespace WeaponShipments.Quests
                     if (_manorVeeper == null) SpawnManorVeeper();
                     SetManorWaypoint();
                     SpawnManorGoons();
+                    MelonCoroutines.Start(WarpArchieMannyIgorWhenReady());
                     break;
                 case 9:
                     SetManorVeeperPlayerOwned(true);
@@ -804,9 +806,15 @@ namespace WeaponShipments.Quests
                     SpawnAllCartelAreas();
                     SetEntry8Objective(_area1Triggered ? "Lose the cartel" : "Go stash the Veeper in your warehouse");
                     if (_area1Triggered) SetLoseTheCartelMarker();
+                    MelonCoroutines.Start(WarpArchieToWarehouseWhenReady());
+                    break;
+                case 10:
+                    MelonCoroutines.Start(WarpArchieToWarehouseWhenReady());
                     break;
                 case 11:
                     Agent28.SetDefaultDialogueActive();
+                    WarpNpcGameObjectByName("Agent 28", Agent28WarehousePos, Agent28WarehouseRot, "Agent28 warehouse");
+                    MelonCoroutines.Start(WarpArchieToWarehouseWhenReady());
                     break;
             }
         }
@@ -1232,6 +1240,12 @@ namespace WeaponShipments.Quests
                 if (!archieDone || !mannyDone || !igorDone)
                     yield return new WaitForSeconds(1f);
             }
+        }
+
+        private static IEnumerator WarpArchieToWarehouseWhenReady()
+        {
+            while (!WarpNpcGameObjectByNameOnce("ArchieWS", ArchieWarehousePos, ArchieWarehouseRot, "Archie warehouse"))
+                yield return new WaitForSeconds(1f);
         }
 
         private static bool WarpNpcGameObjectByNameOnce(string exactName, Vector3 pos, Quaternion rot, string logTag)

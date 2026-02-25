@@ -524,6 +524,34 @@ namespace WeaponShipments.Data
             SyncToSaveable();
         }
 
+        /// <summary>Seconds until the next bought shipment arrives (for Buy Supplies quest). Returns -1 if none pending.</summary>
+        public static float GetSecondsUntilNextBuyShipmentArrives()
+        {
+            var data = WSSaveData.Instance?.Data;
+            if (data == null) return -1f;
+
+            var p = ActiveProperty;
+            float min = float.MaxValue;
+
+            if (p == PropertyType.Warehouse)
+            {
+                foreach (var s in data.Properties.Warehouse.PendingShipments)
+                    if (s.ArrivesAt < min) min = s.ArrivesAt;
+            }
+            else if (p == PropertyType.Garage)
+            {
+                foreach (var s in data.Properties.Garage.PendingShipments)
+                    if (s.ArrivesAt < min) min = s.ArrivesAt;
+            }
+            else
+            {
+                foreach (var s in data.Properties.Bunker.PendingShipments)
+                    if (s.ArrivesAt < min) min = s.ArrivesAt;
+            }
+
+            return min == float.MaxValue ? -1f : min;
+        }
+
         public static void RegisterStockProduced(float amount)
         {
             if (amount <= 0f)

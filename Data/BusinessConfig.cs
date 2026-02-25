@@ -1,4 +1,5 @@
-﻿using WeaponShipments.Data;
+using UnityEngine;
+using WeaponShipments.Data;
 
 namespace WeaponShipments.Data
 {
@@ -14,6 +15,7 @@ namespace WeaponShipments.Data
         public static int WarehousePrice => WeaponShipmentsPrefs.WarehousePrice.Value;
         public static int SigningBonus => WeaponShipmentsPrefs.SigningBonus.Value;
         public static int GaragePrice => WeaponShipmentsPrefs.GaragePrice.Value;
+        public static int MovingUpMinEarnings => WeaponShipmentsPrefs.MovingUpMinEarnings.Value;
 
         // ============================================================
         // PROPERTY-SPECIFIC OVERRIDES
@@ -52,6 +54,19 @@ namespace WeaponShipments.Data
         // ============================================================
         // BASE ECONOMY
         // ============================================================
+
+        /// <summary>Calculate price to buy supplies to fill current property. Formula: price_per_unit = round((100 + 160/(1 + 0.0207142857*q))/50)*50, total = price_per_unit * q.</summary>
+        public static int GetBuySuppliesPrice(BusinessState.PropertyType property)
+        {
+            float max = GetMaxSupplies(property);
+            float current = BusinessState.GetSupplies(property);
+            float q = Mathf.Max(0f, max - current);
+            if (q <= 0f) return 0;
+
+            int qInt = Mathf.CeilToInt(q);
+            float pricePerUnit = Mathf.Round((100f + 160f / (1f + 0.0207142857f * qInt)) / 50f) * 50f;
+            return Mathf.RoundToInt(pricePerUnit * qInt);
+        }
 
         public static int BuySuppliesPrice => WeaponShipmentsPrefs.BuySuppliesPrice.Value;
         public static int PriceHyland => WeaponShipmentsPrefs.PriceHyland.Value;

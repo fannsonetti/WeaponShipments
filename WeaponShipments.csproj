@@ -225,6 +225,9 @@
 		<Compile Include="Quests\Act2\Act2StartingSmall.cs" />
 		<Compile Include="Quests\Act3\Act3MovingUp.cs" />
 		<Compile Include="Quests\Act3\Act3Unpacking.cs" />
+		<Compile Include="Quests\StealSuppliesQuest.cs" />
+		<Compile Include="Quests\SellStockQuest.cs" />
+		<Compile Include="Quests\BuySuppliesQuest.cs" />
 		<Compile Include="Core.cs" />
 		<Compile Include="Data\BusinessConfig.cs" />
 		<Compile Include="Saveables\SavedProperties.cs" />
@@ -239,7 +242,6 @@
 		<Compile Include="Models\GarageLoader.cs" />
 		<Compile Include="NPCs\Agent28.cs" />
 		<Compile Include="NPCs\NorthWarehouseLandlord.cs" />
-		<Compile Include="NPCs\Mechanic.cs" />
 		<Compile Include="Models\WarehouseLoader.cs" />
 		<Compile Include="Models\WarehouseDoorReplacer.cs" />
 		<Compile Include="Models\WarehouseEquipmentSetup.cs" />
@@ -250,6 +252,7 @@
 		<Compile Include="Services\ShipmentSpawner.cs" />
 		<Compile Include="Services\MovingUpEquipmentInteractables.cs" />
 		<Compile Include="Utils\Constants.cs" />
+		<Compile Include="Utils\QuestIconLoader.cs" />
 		<Compile Include="Utils\WSConsoleCommand.cs" />
 		<Compile Include="Utils\WSDebugMenu.cs" />
 		<Compile Include="UI\WeaponShipmentApp.cs" />

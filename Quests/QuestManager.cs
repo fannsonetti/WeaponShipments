@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using WeaponShipments.Data;
+using CustomNPCTest.NPCs;
 
 namespace WeaponShipments.Quests
 {
@@ -18,11 +19,20 @@ namespace WeaponShipments.Quests
         private const string QUEST3_NAME = "Unpacking";
         private const string QUEST4_GUID = "ws_moving_up";
         private const string QUEST4_NAME = "Moving Up";
+        private const string STEAL_GUID = "ws_steal_supplies";
+        private const string STEAL_NAME = "Steal Supplies";
+        private const string SELL_GUID = "ws_sell_stock";
+        private const string SELL_NAME = "Sell Stock";
+        private const string BUY_GUID = "ws_buy_supplies";
+        private const string BUY_NAME = "Buy Supplies";
 
         private static Act1NewNumberQuest? _cachedQuest1;
         private static Act2StartingSmallQuest? _cachedQuest2;
         private static Act3UnpackingQuest? _cachedQuest3;
         private static Act3MovingUpQuest? _cachedQuest4;
+        private static StealSuppliesQuest? _cachedStealQuest;
+        private static SellStockQuest? _cachedSellQuest;
+        private static BuySuppliesQuest? _cachedBuyQuest;
 
         public static void Initialize()
         {
@@ -30,12 +40,54 @@ namespace WeaponShipments.Quests
             _ = GetStartingSmallQuest();
             _ = GetUnpackingQuest();
             _ = GetMovingUpQuest();
+            _ = GetStealSuppliesQuest();
+            _ = GetSellStockQuest();
+            _ = GetBuySuppliesQuest();
         }
 
         public static Act1NewNumberQuest? GetNewNumberQuest() => GetOrCreateQuest1();
         public static Act2StartingSmallQuest? GetStartingSmallQuest() => GetOrCreateQuest2();
         public static Act3UnpackingQuest? GetUnpackingQuest() => GetOrCreateQuest3();
         public static Act3MovingUpQuest? GetMovingUpQuest() => GetOrCreateQuest4();
+        public static StealSuppliesQuest? GetStealSuppliesQuest() => GetOrCreateStealQuest();
+        public static SellStockQuest? GetSellStockQuest() => GetOrCreateSellQuest();
+        public static BuySuppliesQuest? GetBuySuppliesQuest() => GetOrCreateBuyQuest();
+
+        /// <summary>Start the steal quest with waypoint at the pickup location. Call when player starts a steal from the app.</summary>
+        public static void StartStealRun(string origin, string destination)
+        {
+            GetStealSuppliesQuest()?.StartWithPickupAt(origin, destination);
+        }
+
+        /// <summary>Activate delivery step when player approaches crate. Call from ShipmentProximityDetector.</summary>
+        public static void ActivateStealDeliveryStep()
+        {
+            GetStealSuppliesQuest()?.ActivateDeliveryStep();
+        }
+
+        /// <summary>Complete the current steal run. Call when player delivers stolen supplies.</summary>
+        public static void CompleteStealRun()
+        {
+            GetStealSuppliesQuest()?.CompleteStealRun();
+        }
+
+        /// <summary>Start the sell quest. Call when a sell job starts.</summary>
+        public static void StartSellRun(Vector3 pickupPos, string pickupLabel, Vector3 deliveryPos, string deliveryLabel)
+        {
+            GetSellStockQuest()?.StartWithPickupAt(pickupPos, pickupLabel, deliveryPos, deliveryLabel);
+        }
+
+        /// <summary>Complete the current sell run. Call when player delivers stock.</summary>
+        public static void CompleteSellRun()
+        {
+            GetSellStockQuest()?.CompleteSellRun();
+        }
+
+        /// <summary>Start the buy supplies quest. Call when player buys supplies from the app.</summary>
+        public static void StartBuySupplies(float arrivesAtSeconds)
+        {
+            GetBuySuppliesQuest()?.StartWithArrivalIn(arrivesAtSeconds);
+        }
 
         public static void ClearCache()
         {
@@ -43,6 +95,9 @@ namespace WeaponShipments.Quests
             _cachedQuest2 = null;
             _cachedQuest3 = null;
             _cachedQuest4 = null;
+            _cachedStealQuest = null;
+            _cachedSellQuest = null;
+            _cachedBuyQuest = null;
         }
 
         public static void AgentMeetup() => GetNewNumberQuest()?.AgentMeetup();
@@ -194,6 +249,105 @@ namespace WeaponShipments.Quests
             return null;
         }
 
+        private static StealSuppliesQuest? GetOrCreateStealQuest()
+        {
+            if (_cachedStealQuest != null && QuestManagerQuests.Contains(_cachedStealQuest))
+                return _cachedStealQuest;
+            _cachedStealQuest = null;
+
+            var byName = S1API.Quests.QuestManager.GetQuestByName(STEAL_NAME);
+            if (byName is StealSuppliesQuest sq)
+            {
+                _cachedStealQuest = sq;
+                return sq;
+            }
+
+            for (int i = 0; i < QuestManagerQuests.Count; i++)
+            {
+                if (QuestManagerQuests[i] is StealSuppliesQuest found)
+                {
+                    _cachedStealQuest = found;
+                    return found;
+                }
+            }
+
+            var created = S1API.Quests.QuestManager.CreateQuest<StealSuppliesQuest>(STEAL_GUID);
+            if (created is StealSuppliesQuest steal)
+            {
+                _cachedStealQuest = steal;
+                return steal;
+            }
+
+            MelonLogger.Error("[QuestManager] Failed to create StealSuppliesQuest");
+            return null;
+        }
+
+        private static SellStockQuest? GetOrCreateSellQuest()
+        {
+            if (_cachedSellQuest != null && QuestManagerQuests.Contains(_cachedSellQuest))
+                return _cachedSellQuest;
+            _cachedSellQuest = null;
+
+            var byName = S1API.Quests.QuestManager.GetQuestByName(SELL_NAME);
+            if (byName is SellStockQuest sq)
+            {
+                _cachedSellQuest = sq;
+                return sq;
+            }
+
+            for (int i = 0; i < QuestManagerQuests.Count; i++)
+            {
+                if (QuestManagerQuests[i] is SellStockQuest found)
+                {
+                    _cachedSellQuest = found;
+                    return found;
+                }
+            }
+
+            var created = S1API.Quests.QuestManager.CreateQuest<SellStockQuest>(SELL_GUID);
+            if (created is SellStockQuest sell)
+            {
+                _cachedSellQuest = sell;
+                return sell;
+            }
+
+            MelonLogger.Error("[QuestManager] Failed to create SellStockQuest");
+            return null;
+        }
+
+        private static BuySuppliesQuest? GetOrCreateBuyQuest()
+        {
+            if (_cachedBuyQuest != null && QuestManagerQuests.Contains(_cachedBuyQuest))
+                return _cachedBuyQuest;
+            _cachedBuyQuest = null;
+
+            var byName = S1API.Quests.QuestManager.GetQuestByName(BUY_NAME);
+            if (byName is BuySuppliesQuest bq)
+            {
+                _cachedBuyQuest = bq;
+                return bq;
+            }
+
+            for (int i = 0; i < QuestManagerQuests.Count; i++)
+            {
+                if (QuestManagerQuests[i] is BuySuppliesQuest found)
+                {
+                    _cachedBuyQuest = found;
+                    return found;
+                }
+            }
+
+            var created = S1API.Quests.QuestManager.CreateQuest<BuySuppliesQuest>(BUY_GUID);
+            if (created is BuySuppliesQuest buy)
+            {
+                _cachedBuyQuest = buy;
+                return buy;
+            }
+
+            MelonLogger.Error("[QuestManager] Failed to create BuySuppliesQuest");
+            return null;
+        }
+
         public static void TryStartUnpackingIfEligible()
         {
             var data = WSSaveData.Instance?.Data;
@@ -204,14 +358,18 @@ namespace WeaponShipments.Quests
             quest.Begin();
             if (quest.QuestEntries.Count >= 1) quest.QuestEntries[0].Begin();
             quest.Stage = 1;
+            quest.OnQuestStarted();
             quest.EnsureTickHooked();
-            SpawnUnpackingEquipmentBox();
+            Archie.SetDialogueFromUnpackingState();
             MelonLogger.Msg("[Act3] Unpacking quest started.");
         }
 
-        /// <summary>Called when Unpacking completes.</summary>
+        /// <summary>Called when Unpacking completes. Only starts if TotalEarnings >= MovingUpMinEarnings.</summary>
         public static void TryStartMovingUpOnZoneEntry()
         {
+            if (BusinessState.TotalEarnings < BusinessConfig.MovingUpMinEarnings)
+                return;
+
             var quest = GetMovingUpQuest();
             if (quest == null || quest.Stage > 0) return;
 
@@ -222,37 +380,6 @@ namespace WeaponShipments.Quests
             SpawnMovingUpEquipmentBox();
             Services.MovingUpEquipmentInteractables.SetupEquipmentInteractables();
             MelonLogger.Msg("[Act3] Moving Up quest started.");
-        }
-
-        private static void SpawnUnpackingEquipmentBox()
-        {
-            var van = Services.WarehouseVeeperManager.GetWarehouseVeeper();
-            var pos = van != null && van.transform.root != null
-                ? van.transform.root.position
-                : new Vector3(-26f, -4.3f, 173.5f);
-            var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            box.name = "UnpackingEquipmentBox";
-            box.transform.position = pos;
-            box.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
-            var col = box.GetComponent<Collider>();
-            if (col != null) UnityEngine.Object.Destroy(col);
-
-            var renderer = box.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-                if (shader != null)
-                {
-                    var mat = new Material(shader);
-                    mat.color = Color.white;
-                    renderer.material = mat;
-                }
-            }
-
-            var asm = System.Reflection.Assembly.Load("Assembly-CSharp");
-            var ioType = asm?.GetType("ScheduleOne.Interaction.InteractableObject");
-            if (ioType != null)
-                box.AddComponent(ioType);
         }
 
         private static void SpawnMovingUpEquipmentBox()
@@ -266,10 +393,6 @@ namespace WeaponShipments.Quests
             box.transform.position = pos;
             var col = box.GetComponent<Collider>();
             if (col != null) UnityEngine.Object.Destroy(col);
-        }
-
-        public static void TryStartAct3IfEligible()
-        {
         }
 
         private static List<Quest> QuestManagerQuests => (List<Quest>)typeof(S1API.Quests.QuestManager)

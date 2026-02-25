@@ -148,10 +148,12 @@ namespace WeaponShipments
             var p = Data.WSPersistent.Instance?.Data;
             if (data == null || p == null) return;
             if (!data.Properties.Warehouse.SetupComplete) return;
-            if (p.WarehouseZoneEnteredAfterDelivery) return;
 
-            p.WarehouseZoneEnteredAfterDelivery = true;
-            WeaponShipments.Quests.QuestManager.TryStartUnpackingIfEligible();
+            if (!p.WarehouseZoneEnteredAfterDelivery)
+            {
+                p.WarehouseZoneEnteredAfterDelivery = true;
+                WeaponShipments.Quests.QuestManager.TryStartUnpackingIfEligible();
+            }
         }
 
         public override void OnApplicationQuit()

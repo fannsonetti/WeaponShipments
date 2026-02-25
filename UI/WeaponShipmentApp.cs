@@ -72,6 +72,8 @@ namespace WeaponShipments.UI
         private Text _locationValueText;
 
         private GameObject _upgradesNavButtonGO;
+        private GameObject _buySuppliesButtonGO;
+        private Text _buySuppliesLabel;
 
         // Home page owned properties container (rebuilt when ownership changes)
         private Transform _ownedPropertiesContainer;
@@ -666,6 +668,10 @@ namespace WeaponShipments.UI
 
             if (_upgradesNavButtonGO != null)
                 _upgradesNavButtonGO.SetActive(upgradesAllowed);
+
+            bool buySuppliesAllowed = BusinessState.ActiveProperty != BusinessState.PropertyType.Warehouse;
+            if (_buySuppliesButtonGO != null)
+                _buySuppliesButtonGO.SetActive(buySuppliesAllowed);
 
             // If player is on Upgrades but property doesn't allow it, bounce to Home.
             if (!upgradesAllowed && _upgradesPage != null && _upgradesPage.activeSelf)
@@ -1399,8 +1405,26 @@ namespace WeaponShipments.UI
             // Update shared Business Status line on all pages
             UpdateBusinessStatus();
             UpdateSellButtons();
+            UpdateBuySuppliesButton();
             UpdateHomeInfo();
             RefreshUpgradePriceLabels();
+        }
+
+        private void UpdateBuySuppliesButton()
+        {
+            if (_buySuppliesLabel == null) return;
+            if (BusinessState.ActiveProperty == BusinessState.PropertyType.Warehouse)
+            {
+                _buySuppliesLabel.text = "Buy Supplies";
+                return;
+            }
+            int price = BusinessConfig.GetBuySuppliesPrice(BusinessState.ActiveProperty);
+            float max = BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty);
+            float current = BusinessState.GetSupplies(BusinessState.ActiveProperty);
+            if (current >= max)
+                _buySuppliesLabel.text = "Supplies Full";
+            else
+                _buySuppliesLabel.text = $"Buy Supplies: ${price:N0}";
         }
 
         private void RefreshUpgradePriceLabels()
@@ -2242,7 +2266,7 @@ namespace WeaponShipments.UI
 
             var (buyGO, buyBtn, buyLabel) = UIFactory.RoundedButtonWithLabel(
                 "BuySuppliesButton",
-                $"Buy Supplies: ${BusinessConfig.BuySuppliesPrice:N0}",
+                "Buy Supplies",
                 leftColumn.transform,
                 new Color(0.35f, 0.0f, 0.0f),
                 0,
@@ -2250,6 +2274,8 @@ namespace WeaponShipments.UI
                 buttonFontSize,
                 Color.white
             );
+            _buySuppliesButtonGO = buyGO;
+            _buySuppliesLabel = buyLabel;
             if (buyLabel != null)
                 buyLabel.alignment = TextAnchor.MiddleCenter;
             var buyBtnLE = buyGO.AddComponent<LayoutElement>();
@@ -2794,6 +2820,12 @@ namespace WeaponShipments.UI
             // Register the job + spawn only the pickup crate for now
             BusinessState.RegisterResupplyJobStarted();
             ShipmentSpawner.SpawnShipmentCrate(chosen);
+
+            var unpacking = WeaponShipments.Quests.QuestManager.GetUnpackingQuest();
+            if (unpacking != null && unpacking.IsHandlingSteal)
+                unpacking.StartUnpackingSteal(chosen.Origin, chosen.Destination);
+            else
+                WeaponShipments.Quests.QuestManager.StartStealRun(chosen.Origin, chosen.Destination);
             // NOTE: delivery area is spawned later in DelayedDropoffPhase
 
             // --- Agent 28 messaging setup ---
@@ -2828,14 +2860,12 @@ namespace WeaponShipments.UI
 
         private void OnBuySuppliesClicked()
         {
-            float balance = Money.GetCashBalance();
-            int price = BusinessConfig.BuySuppliesPrice;
+            var p = BusinessState.ActiveProperty;
+            float max = BusinessConfig.GetMaxSupplies(p);
+            float current = BusinessState.GetSupplies(p);
+            float amountNeeded = Mathf.Max(0f, max - current);
 
-            // Delivery delay (seconds)
-            float delaySeconds = BusinessConfig.BuySuppliesDeliveryDelay;
-
-            // Already full
-            if (BusinessState.Supplies >= BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty))
+            if (amountNeeded <= 0f)
             {
                 WeaponShipmentApp.ShowAlertStatic(
                     "Supplies storage already full",
@@ -2845,7 +2875,10 @@ namespace WeaponShipments.UI
                 return;
             }
 
-            // Get save data
+            int price = BusinessConfig.GetBuySuppliesPrice(p);
+            float balance = Money.GetCashBalance();
+            float delaySeconds = BusinessConfig.BuySuppliesDeliveryDelay;
+
             var save = WSSaveData.Instance;
             var data = save != null ? save.Data : null;
             if (data == null)
@@ -2858,7 +2891,6 @@ namespace WeaponShipments.UI
                 return;
             }
 
-            // Money check
             if (balance < price)
             {
                 WeaponShipmentApp.ShowAlertStatic(
@@ -2869,24 +2901,22 @@ namespace WeaponShipments.UI
                 return;
             }
 
-            // Pay now
             Money.ChangeCashBalance(-price);
 
-            // Allow multiple concurrent shipments per property (queued).
-            if (BusinessState.ActiveProperty == BusinessState.PropertyType.Warehouse)
+            if (p == BusinessState.PropertyType.Warehouse)
             {
                 data.Properties.Warehouse.PendingShipments.Add(new WarehouseShipment
                 {
                     ArrivesAt = delaySeconds,
-                    SuppliesAmount = BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty)
+                    SuppliesAmount = amountNeeded
                 });
             }
-            else if (BusinessState.ActiveProperty == BusinessState.PropertyType.Garage)
+            else if (p == BusinessState.PropertyType.Garage)
             {
                 data.Properties.Garage.PendingShipments.Add(new GarageShipment
                 {
                     ArrivesAt = delaySeconds,
-                    SuppliesAmount = BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty)
+                    SuppliesAmount = amountNeeded
                 });
             }
             else
@@ -2894,11 +2924,12 @@ namespace WeaponShipments.UI
                 data.Properties.Bunker.PendingShipments.Add(new BunkerShipment
                 {
                     ArrivesAt = delaySeconds,
-                    SuppliesAmount = BusinessConfig.GetMaxSupplies(BusinessState.ActiveProperty)
+                    SuppliesAmount = amountNeeded
                 });
             }
             // Stats
             BusinessState.RegisterResupplyJobStarted();
+            WeaponShipments.Quests.QuestManager.StartBuySupplies(delaySeconds);
 
             WeaponShipmentApp.ShowAlertStatic(
                 "Supplies ordered",
@@ -3019,6 +3050,18 @@ namespace WeaponShipments.UI
 
         private void OnSellToHylandPointClicked()
         {
+            // Unpacking: must talk to Archie before starting the sell
+            var unpacking = WeaponShipments.Quests.QuestManager.GetUnpackingQuest();
+            if (unpacking != null && unpacking.Stage == 5)
+            {
+                WeaponShipmentApp.ShowAlertStatic(
+                    "Talk to Archie first",
+                    "Archie will explain how to run the sale. Talk to him at the warehouse.",
+                    false
+                );
+                return;
+            }
+
             // Prevent stacking multiple sell jobs
             if (BusinessState.SellJobInProgress)
             {

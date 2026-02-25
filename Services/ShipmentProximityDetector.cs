@@ -1,4 +1,4 @@
-﻿using S1API.Entities;
+using S1API.Entities;
 using UnityEngine;
 using WeaponShipments.NPCs;
 using WeaponShipments.Services;
@@ -35,6 +35,12 @@ public class ShipmentProximityDetector : MonoBehaviour
 
             // Send dropoff message
             Agent28.NotifyStealDropoff(_dropoffLabel);
+
+            var unpacking = WeaponShipments.Quests.QuestManager.GetUnpackingQuest();
+            if (unpacking != null && unpacking.IsHandlingSteal)
+                unpacking.OnUnpackingStealProximityReached();
+            else
+                WeaponShipments.Quests.QuestManager.ActivateStealDeliveryStep();
 
             // Spawn delivery area at this moment
             ShipmentSpawner.SpawnDeliveryArea(_shipmentId);

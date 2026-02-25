@@ -49,16 +49,6 @@ namespace WeaponShipments.Services
         private static readonly Quaternion SellDeliveryRotation_Chemical =
             Quaternion.Euler(0f, 0f, 0f);
 
-        // Black Market as a delivery-only dropoff
-        private static readonly Vector3 SellDeliveryPosition_BlackMarket =
-            new Vector3(-60.9603f, -0.9796f, 35.7872f);
-
-        private static readonly Vector3 SellDeliverySize_BlackMarket =
-            new Vector3(4f, 3f, 2.5f);
-
-        private static readonly Quaternion SellDeliveryRotation_BlackMarket =
-            Quaternion.Euler(0f, 0f, 0f);
-
         private const string SellVehicleCode = "Cheetah"; // API vehicle code
         private const string SellVehiclePrefabName = "Coupe"; // actual ingame prefab name
 
@@ -90,6 +80,9 @@ namespace WeaponShipments.Services
                 return sp;
             return new SpawnPoint(FallbackSpawnPosition, FallbackSpawnRotation);
         }
+
+        /// <summary>Returns the world position for a shipment pickup by origin name. Used for steal quest waypoints.</summary>
+        public static Vector3 GetPickupPositionForOrigin(string origin) => GetSpawnPointForOrigin(origin).Position;
 
         private struct SellSpawnPoint
         {
@@ -155,7 +148,7 @@ namespace WeaponShipments.Services
             }
         }
 
-        // All possible sell job dropoffs (randomly chosen per job)
+        // All possible sell job dropoffs (randomly chosen per job). Black Market excluded.
         private static readonly SellDropoff[] SellDropoffs =
         {
             new SellDropoff(
@@ -169,12 +162,6 @@ namespace WeaponShipments.Services
                 SellDeliverySize_Chemical,
                 SellDeliveryRotation_Chemical,
                 "the Chemical Company"
-            ),
-            new SellDropoff(
-                SellDeliveryPosition_BlackMarket,
-                SellDeliverySize_BlackMarket,
-                SellDeliveryRotation_BlackMarket,
-                "the Black Market"
             ),
         };
 
@@ -247,6 +234,9 @@ namespace WeaponShipments.Services
                 return z;
             return new DeliveryZone(FallbackDeliveryPosition, DefaultDeliverySize, DefaultRotation);
         }
+
+        /// <summary>Returns the delivery position for a steal destination. Used for steal quest waypoints.</summary>
+        public static Vector3 GetDeliveryPositionForDestination(string destination) => GetZoneForDestination(destination).Position;
 
         private static void SpawnSellVehicleJob(
             float stockAmount,
@@ -340,15 +330,10 @@ namespace WeaponShipments.Services
             );
         }
 
-        // Creates the sell delivery trigger + visible lime cube,
-        // and returns the chosen dropoff name for Agent 28.
-        private static string SpawnSellDeliveryArea(float stockAmount, float payout)
+        // Creates the sell delivery trigger + visible lime cube.
+        private static string SpawnSellDeliveryArea(float stockAmount, float payout, SellDropoff d)
         {
             var go = new GameObject("SellDeliveryArea");
-
-            // Random dropoff (North Warehouse / Chemical Company / Black Market)
-            int idx = UnityEngine.Random.Range(0, SellDropoffs.Length);
-            SellDropoff d = SellDropoffs[idx];
 
             go.transform.position = d.Position;
             go.transform.rotation = d.Rotation;
@@ -448,8 +433,14 @@ namespace WeaponShipments.Services
                 SpawnSellVehicleJob(stockAmount, payout, vehicleCode: "Veeper", prefabName: "Van", spawnPosition: sp.Position, spawnRotation: sp.Rotation);
             }
 
-            // Create delivery area and get the selected dropoff name
-            string chosenDropoff = SpawnSellDeliveryArea(stockAmount, payout);
+            // Pick random dropoff and create delivery area
+            int dropoffIdx = UnityEngine.Random.Range(0, SellDropoffs.Length);
+            SellDropoff d = SellDropoffs[dropoffIdx];
+            string chosenDropoff = SpawnSellDeliveryArea(stockAmount, payout, d);
+
+            var unpacking = WeaponShipments.Quests.QuestManager.GetUnpackingQuest();
+            if (unpacking == null || !unpacking.IsHandlingSell)
+                WeaponShipments.Quests.QuestManager.StartSellRun(sp.Position, sp.Label, d.Position, d.Label);
             Agent28.NotifySellJobStart(sp.Label, isVehicleJob, chosenDropoff);
         }
 
@@ -514,7 +505,12 @@ namespace WeaponShipments.Services
                 Money.ChangeCashBalance(_payout);
                 BusinessState.RegisterSale(_payout, true);
                 BusinessState.ClearSellJobFlag();
-                WeaponShipments.Quests.QuestManager.TryStartAct3IfEligible();
+                WeaponShipments.Quests.QuestManager.TryStartMovingUpOnZoneEntry();
+
+                var unpacking = WeaponShipments.Quests.QuestManager.GetUnpackingQuest();
+                if (unpacking == null || !unpacking.IsHandlingSell)
+                    WeaponShipments.Quests.QuestManager.CompleteSellRun();
+                unpacking?.OnSellJobCompleted();
 
                 // Tell Agent 28 – Hyland is the only target for now
                 Agent28.NotifySellReport(
@@ -615,6 +611,11 @@ namespace WeaponShipments.Services
                 int reward = Mathf.Clamp(shipment.Quantity, 10, BusinessConfig.MaxSupplies);
                 BusinessState.TryAddSupplies(reward);
                 BusinessState.RegisterResupplyJobCompleted();
+
+                var unpacking = WeaponShipments.Quests.QuestManager.GetUnpackingQuest();
+                if (unpacking == null || !unpacking.IsHandlingSteal)
+                    WeaponShipments.Quests.QuestManager.CompleteStealRun();
+
                 Agent28.NotifySuppliesArrived(
                     reward,
                     BusinessState.Supplies,

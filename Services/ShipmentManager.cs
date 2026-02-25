@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using MelonLoader;
 using UnityEngine;
@@ -32,13 +32,12 @@ namespace WeaponShipments.Services
             "Shipment"
         };
 
-        // Origins
+        // Origins (Black Market excluded from steal pool)
         private static readonly string[] Origins =
         {
             "RV",
             "Gazebo",
-            "Sewer Market",
-            "Black Market"
+            "Sewer Market"
         };
 
         // Destinations

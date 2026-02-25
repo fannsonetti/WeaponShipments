@@ -107,6 +107,7 @@ namespace CustomNPCTest.NPCs
 
         private static bool _defaultDialogueRegistered = false;
         private static bool _meetupDialogueRegistered = false;
+        private static bool _unpackingDialogueRegistered = false;
 
         private void RegisterDefaultDialogue()
         {
@@ -152,6 +153,24 @@ namespace CustomNPCTest.NPCs
                 return;
 
             Instance.ActivateMeetupDialogue();
+        }
+
+        public static void SetDialogueFromUnpackingState()
+        {
+            if (Instance == null) return;
+
+            var quest = QuestManager.GetUnpackingQuest();
+            if (quest == null)
+            {
+                Instance.ActivateDefaultDialogue();
+                return;
+            }
+            if (quest.Stage == 1)
+                Instance.ActivateUnpackingIntroDialogue();
+            else if (quest.Stage == 5)
+                Instance.ActivateUnpackingSellBriefingDialogue();
+            else
+                Instance.ActivateDefaultDialogue();
         }
 
         private const string ACT0_CONTAINER = "Act0_Archie_FirstMeet";
@@ -246,6 +265,86 @@ namespace CustomNPCTest.NPCs
             }
         }
 
+        private const string UNPACKING_CONTAINER = "Archie_Unpacking";
+        private const string UNPACKING_CH_GOTIT = "UNPACKING_GOT_IT";
+
+        private void RegisterUnpackingDialogue()
+        {
+            if (_unpackingDialogueRegistered) return;
+            _unpackingDialogueRegistered = true;
+
+            Dialogue.BuildAndRegisterContainer(UNPACKING_CONTAINER, c =>
+            {
+                c.AddNode("ENTRY",
+                    "First thing – supplies. You need them to run production.",
+                    ch => ch.Add("U1_NEXT", "Go on.", "STEAL_1"));
+                c.AddNode("STEAL_1",
+                    "Use the app to steal. Pick a spot, grab the crate, bring it back here.",
+                    ch => ch.Add("U1_NEXT", "And then?", "PRODUCTION"));
+                c.AddNode("PRODUCTION",
+                    "Production runs automatic. Supplies turn into stock. Nothing you need to do.",
+                    ch => ch.Add("U1_NEXT", "Selling?", "SELL_1"));
+                c.AddNode("SELL_1",
+                    "When you have stock, sell through the app. They send a van. You load it, deliver to the drop.",
+                    ch =>
+                    {
+                        ch.Add(UNPACKING_CH_GOTIT, "Got it.", "EXIT");
+                    });
+                c.AddNode("EXIT", "");
+            });
+
+            Dialogue.OnChoiceSelected(UNPACKING_CH_GOTIT, () =>
+            {
+                QuestManager.GetUnpackingQuest()?.AdvanceFromTalkToArchie();
+                SetDialogueFromUnpackingState();
+            });
+        }
+
+        private void ActivateUnpackingIntroDialogue()
+        {
+            RegisterUnpackingDialogue();
+            Dialogue.UseContainerOnInteract(UNPACKING_CONTAINER);
+        }
+
+        private const string UNPACKING_SELL_CONTAINER = "Archie_UnpackingSell";
+        private const string UNPACKING_SELL_CH_GOTIT = "UNPACKING_SELL_GOT_IT";
+
+        private static bool _unpackingSellDialogueRegistered;
+
+        private void RegisterUnpackingSellDialogue()
+        {
+            if (_unpackingSellDialogueRegistered) return;
+            _unpackingSellDialogueRegistered = true;
+
+            Dialogue.BuildAndRegisterContainer(UNPACKING_SELL_CONTAINER, c =>
+            {
+                c.AddNode("ENTRY",
+                    "You’ve got stock. Time to move it.",
+                    ch => ch.Add("S1_NEXT", "How?", "SELL_2"));
+                c.AddNode("SELL_2",
+                    "Open the app, hit Sell Stock. They’ll send a van with a load point.",
+                    ch => ch.Add("S1_NEXT", "Then?", "SELL_3"));
+                c.AddNode("SELL_3",
+                    "Fill it, drive to the drop. Drop the load, get paid.",
+                    ch =>
+                    {
+                        ch.Add(UNPACKING_SELL_CH_GOTIT, "Alright.", "EXIT");
+                    });
+                c.AddNode("EXIT", "");
+            });
+
+            Dialogue.OnChoiceSelected(UNPACKING_SELL_CH_GOTIT, () =>
+            {
+                QuestManager.GetUnpackingQuest()?.AdvanceFromSellBriefing();
+            });
+        }
+
+        private void ActivateUnpackingSellBriefingDialogue()
+        {
+            RegisterUnpackingSellDialogue();
+            Dialogue.UseContainerOnInteract(UNPACKING_SELL_CONTAINER);
+        }
+
         private const string GO_NAME = "ArchieWS";
 
         private void RenameSpawnedGameObject()
@@ -263,7 +362,7 @@ namespace CustomNPCTest.NPCs
                 base.OnCreated();
                 RenameSpawnedGameObject();
                 Appearance.Build();
-                ActivateDefaultDialogue();
+                SetDialogueFromUnpackingState();
 
                 Aggressiveness = 1f;
                 Region = Region.Northtown;

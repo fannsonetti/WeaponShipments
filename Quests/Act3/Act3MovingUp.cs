@@ -14,6 +14,7 @@ namespace WeaponShipments.Quests
         protected override string Title => "Moving Up";
         protected override string Description => "Expand your operation.";
         protected override bool AutoBegin => false;
+        protected override Sprite? QuestIcon => WeaponShipments.Utils.QuestIconLoader.Load("quest_moving_up.png");
 
         private WSSaveData.SavedMovingUpQuest Saved => WSSaveData.Instance?.MovingUpQuest;
 
@@ -35,9 +36,8 @@ namespace WeaponShipments.Quests
         public void PurchaseGarage()
         {
             if (QuestEntries.Count >= 1) QuestEntries[0].Complete();
-            if (QuestEntries.Count >= 2) QuestEntries[1].Complete();
             if (Stage < 2) Stage = 2;
-            if (QuestEntries.Count >= 3) QuestEntries[2].Begin();
+            if (QuestEntries.Count >= 2) QuestEntries[1].Begin();
             MelonLogger.Msg("[Act3] Garage purchased; advancing to equipment step.");
         }
 
@@ -57,8 +57,7 @@ namespace WeaponShipments.Quests
 
         private void CreateEntries()
         {
-            AddEntry("Talk to the landlord of the north warehouse building", LandlordPos);
-            AddEntry("Buy the unused garage space", LandlordPos);
+            AddEntry("Buy the garage from the landlord", LandlordPos);
             AddEntry("Buy equipment for the garage", LandlordPos);
             AddEntry("Hire more people", LandlordPos);
         }

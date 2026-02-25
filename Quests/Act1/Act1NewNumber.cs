@@ -16,6 +16,7 @@ namespace WeaponShipments.Quests
         protected override string Title => "New Number, New Problems";
         protected override string Description => "A new opportunity has surfaced.";
         protected override bool AutoBegin => false;
+        protected override Sprite? QuestIcon => WeaponShipments.Utils.QuestIconLoader.Load("quest_new_number.png");
 
         private const int RequiredLevel = 10;
         private const float PollInterval = 2f;

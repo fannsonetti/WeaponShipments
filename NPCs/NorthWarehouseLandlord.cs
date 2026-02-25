@@ -155,13 +155,6 @@ namespace WeaponShipments.NPCs
                 c.AddNode("EXIT", "");
             });
 
-            Dialogue.OnChoiceSelected("ASK_PRICE", () =>
-            {
-                var quest = QuestManager.GetMovingUpQuest();
-                if (quest != null && quest.QuestEntries.Count >= 1)
-                    quest.QuestEntries[0].Complete();
-            });
-
             Dialogue.OnChoiceSelected(GARAGE_CH_PAY, () =>
             {
                 var data = WSSaveData.Instance?.Data;
