@@ -2,13 +2,14 @@ using System;
 using MelonLoader;
 using S1API.Quests;
 using UnityEngine;
+using CustomNPCTest.NPCs;
 using WeaponShipments.Data;
 using WeaponShipments.Quests;
 
 namespace WeaponShipments.Utils
 {
     /// <summary>
-    /// Debug menu for development. Toggled via "ws menu" in console.
+    /// Debug menu for development. Toggled via "ws menu" console command.
     /// </summary>
     public class WSDebugMenu : MonoBehaviour
     {
@@ -17,20 +18,42 @@ namespace WeaponShipments.Utils
         private Vector2 _scroll;
         private const int WIDTH = 420;
         private const int HEIGHT = 520;
+        private int _activeTab; // 0=Properties, 1=Quests
 
         private void OnGUI()
         {
             if (!Visible) return;
 
             var rect = new Rect(Screen.width / 2f - WIDTH / 2f, 40, WIDTH, HEIGHT);
-            GUI.Box(rect, "WS Debug (ws menu to close)");
+            GUI.Box(rect, "WS Menu (ws menu to close)");
 
             var viewRect = new Rect(rect.x + 8, rect.y + 28, rect.width - 16, rect.height - 36);
+
+            GUILayout.BeginArea(new Rect(rect.x + 8, rect.y + 28, rect.width - 16, 24));
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Toggle(_activeTab == 0, "Properties", GUILayout.Height(22))) _activeTab = 0;
+            if (GUILayout.Toggle(_activeTab == 1, "Quests", GUILayout.Height(22))) _activeTab = 1;
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+
+            var scrollRect = new Rect(viewRect.x, viewRect.y + 28, viewRect.width, viewRect.height - 28);
             var contentRect = new Rect(0, 0, rect.width - 32, 900);
-            _scroll = GUI.BeginScrollView(viewRect, _scroll, contentRect);
+            _scroll = GUI.BeginScrollView(scrollRect, _scroll, contentRect);
             GUILayout.BeginArea(contentRect);
             GUILayout.BeginVertical();
 
+            if (_activeTab == 0)
+                DrawPropertiesTab();
+            else
+                DrawQuestsTab();
+
+            GUILayout.EndVertical();
+            GUILayout.EndArea();
+            GUI.EndScrollView();
+        }
+
+        private void DrawPropertiesTab()
+        {
             GUILayout.Label("Stock / Supplies");
             foreach (var p in new[] { BusinessState.PropertyType.Warehouse, BusinessState.PropertyType.Garage, BusinessState.PropertyType.Bunker })
             {
@@ -76,8 +99,10 @@ namespace WeaponShipments.Utils
                         BusinessState.SetPropertyOwned(p, newVal);
                 }
             }
+        }
 
-            GUILayout.Space(8);
+        private void DrawQuestsTab()
+        {
             GUILayout.Label("Quests (Debug)");
             var q1 = WeaponShipments.Quests.QuestManager.GetNewNumberQuest();
             var q2 = WeaponShipments.Quests.QuestManager.GetStartingSmallQuest();
@@ -121,6 +146,19 @@ namespace WeaponShipments.Utils
                 if (int.TryParse(GUILayout.TextField(stage.ToString(), GUILayout.Width(40)), out var s) && s != stage)
                     SetQuestStage(q3, s);
                 GUILayout.EndHorizontal();
+                if (GUILayout.Button("Advance from Talk to Archie")) (q3 as Act3UnpackingQuest)?.AdvanceFromTalkToArchie();
+                if (GUILayout.Button("Advance to Stock (4->5)"))
+                {
+                    if (q3 is Act3UnpackingQuest uq)
+                    {
+                        SetQuestStage(q3, 5);
+                        if (uq.QuestEntries.Count >= 4) uq.QuestEntries[3].Complete();
+                        if (uq.QuestEntries.Count >= 5) uq.QuestEntries[4].Begin();
+                        Archie.SetDialogueFromUnpackingState();
+                    }
+                }
+                if (GUILayout.Button("Advance from Sell Briefing")) (q3 as Act3UnpackingQuest)?.AdvanceFromSellBriefing();
+                if (GUILayout.Button("Complete Sell Job")) (q3 as Act3UnpackingQuest)?.OnSellJobCompleted();
             }
 
             if (q4 != null)
@@ -131,11 +169,16 @@ namespace WeaponShipments.Utils
                 if (int.TryParse(GUILayout.TextField(stage.ToString(), GUILayout.Width(40)), out var s) && s != stage)
                     SetQuestStage(q4, s);
                 GUILayout.EndHorizontal();
+                if (GUILayout.Button("Purchase Garage")) (q4 as Act3MovingUpQuest)?.PurchaseGarage();
+                if (GUILayout.Button("Complete Talk to Agent 28"))
+                {
+                    if (q4.QuestEntries.Count >= 2) q4.QuestEntries[1].Complete();
+                }
+                if (GUILayout.Button("Complete Talk to Archie"))
+                {
+                    if (q4.QuestEntries.Count >= 3) q4.QuestEntries[2].Complete();
+                }
             }
-
-            GUILayout.EndVertical();
-            GUILayout.EndArea();
-            GUI.EndScrollView();
         }
 
         private static void DrawStatField(string label, float val, Action<float> setter)

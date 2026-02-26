@@ -38,6 +38,8 @@ namespace WeaponShipments.Quests
         }
 
         private QuestEntry _agentMeetupEntry;
+        private QuestEntry _goToSleepEntry;
+        private QuestEntry _warehouseTalkEntry;
 
         private static readonly Vector3 BlackMarketPos =
             new Vector3(-44.3456f, -2.1f, 23.4812f);
@@ -156,15 +158,21 @@ namespace WeaponShipments.Quests
                 RestoreStageStateForNewQuestOnly();
         }
 
+        private static readonly Vector3 Agent28WarehousePos = new Vector3(-23.0225f, -5f, 170.31f);
+
         private void CreateEntries()
         {
             AddEntry("Meet the Unknown Contact.", BlackMarketPos);
             AddEntry("Meet Agent 28 in the black market and complete the deal.", BlackMarketPos);
+            AddEntry("Go to sleep.");
+            AddEntry("Go to the warehouse and talk to Agent 28.", Agent28WarehousePos);
         }
 
         private void RebindEntriesFromList()
         {
             if (QuestEntries.Count >= 1) _agentMeetupEntry = QuestEntries[0];
+            if (QuestEntries.Count >= 3) _goToSleepEntry = QuestEntries[2];
+            if (QuestEntries.Count >= 4) _warehouseTalkEntry = QuestEntries[3];
         }
 
         private void AttachSleepHookOnce()
@@ -177,12 +185,17 @@ namespace WeaponShipments.Quests
         private void OnSleepEnd(int minutesSkipped)
         {
             var p = WSPersistent.Instance?.Data;
-            if (p != null && p.AwaitingWarehouseTalk)
+            if (p != null && p.DealCompleteAwaitingSleep)
             {
+                p.DealCompleteAwaitingSleep = false;
+                p.AwaitingWarehouseTalk = true;
+                Stage = 3;
+                _goToSleepEntry?.Complete();
+                _warehouseTalkEntry?.Begin();
                 MelonCoroutines.Start(WarpAgent28WhenReady());
-                Agent28.SetWarehouseDialogueActive();
+                Agent28.SetDialogueFromWarehouseState();
                 Agent28.Instance?.SendTextMessage("Come talk to me in the warehouse when you're ready.");
-                MelonLogger.Msg("[NewNumber] Woke: Agent 28 warp scheduled, sent invite text.");
+                MelonLogger.Msg("[NewNumber] Woke: Agent 28 warp scheduled, warehouse POI set.");
             }
         }
 
@@ -207,22 +220,21 @@ namespace WeaponShipments.Quests
                     break;
 
                 case 2:
+                    Begin();
+                    _agentMeetupEntry?.Complete();
+                    if (QuestEntries.Count >= 2) QuestEntries[1].Complete();
+                    _goToSleepEntry?.Begin();
+                    Agent28.SetDialogueFromWarehouseState();
+                    break;
+
                 case 3:
                     Begin();
                     _agentMeetupEntry?.Complete();
                     if (QuestEntries.Count >= 2) QuestEntries[1].Complete();
-                    Complete();
-                    var pp = WSPersistent.Instance?.Data;
-                    if (pp != null && pp.AwaitingWarehouseTalk)
-                    {
-                        WarpAgent28ToWarehouse();
-                        Agent28.SetWarehouseDialogueActive();
-                    }
-                    else
-                    {
-                        WarpAgent28ToWarehouse();
-                        Agent28.SetDialogueFromWarehouseState();
-                    }
+                    _goToSleepEntry?.Complete();
+                    _warehouseTalkEntry?.Begin();
+                    WarpAgent28ToWarehouse();
+                    Agent28.SetDialogueFromWarehouseState();
                     break;
             }
         }
@@ -242,18 +254,11 @@ namespace WeaponShipments.Quests
                     Agent28.SetMeetupDialogueActive();
                     break;
                 case 2:
+                    Agent28.SetDialogueFromWarehouseState();
+                    break;
                 case 3:
-                    var pApply = WSPersistent.Instance?.Data;
-                    if (pApply != null && pApply.AwaitingWarehouseTalk)
-                    {
-                        WarpAgent28ToWarehouse();
-                        Agent28.SetWarehouseDialogueActive();
-                    }
-                    else
-                    {
-                        WarpAgent28ToWarehouse();
-                        Agent28.SetDialogueFromWarehouseState();
-                    }
+                    WarpAgent28ToWarehouse();
+                    Agent28.SetDialogueFromWarehouseState();
                     break;
             }
         }
@@ -279,17 +284,15 @@ namespace WeaponShipments.Quests
             _agentMeetupEntry?.Complete();
             if (QuestEntries.Count >= 2) QuestEntries[1].Complete();
 
-            Stage = 3;
-            Complete();
-
+            Stage = 2;
             var p = WSPersistent.Instance?.Data;
-            if (p != null) p.AwaitingWarehouseTalk = true;
+            if (p != null) p.DealCompleteAwaitingSleep = true;
 
-            Agent28.SetDefaultDialogueActive();
-            MelonLogger.Msg("[NewNumber] Deal done. Agent 28 stays in black market; player must sleep before warehouse talk.");
+            _goToSleepEntry?.Begin();
+            Agent28.SetDialogueFromWarehouseState();
+            MelonLogger.Msg("[NewNumber] Deal done. Go to sleep, then warehouse talk.");
         }
 
-        private static readonly Vector3 Agent28WarehousePos = new Vector3(-23.0225f, -5f, 170.31f);
         private static readonly Quaternion Agent28WarehouseRot = Quaternion.Euler(0f, 310f, 0f);
 
         private static IEnumerator WarpAgent28WhenReady()

@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using MelonLoader;
 using S1API.Entities;
 using UnityEngine;
@@ -129,8 +130,7 @@ namespace WeaponShipments
         private Vector3 _closedPos;
         private Vector3 _openPos;
         private float _openAmount;
-        private const float OpenDist = 4f;
-        private const float CloseDist = 5f;
+        private const float TriggerDist = 4f;
 
         private float _smoothSpeed = 1f;
 
@@ -147,10 +147,78 @@ namespace WeaponShipments
             var player = Player.Local;
             if (player == null) return;
 
-            float dist = Vector3.Distance(player.Position, _closedPos);
-            float target = dist <= OpenDist ? 1f : dist >= CloseDist ? 0f : _openAmount;
+            Vector3 checkPos = GetCachedPlayerOrVehiclePosition(player);
+            float dist = Vector3.Distance(checkPos, _closedPos);
+            float target = dist <= TriggerDist ? 1f : 0f;
             _openAmount = Mathf.MoveTowards(_openAmount, target, _smoothSpeed * Time.deltaTime);
             transform.position = Vector3.Lerp(_closedPos, _openPos, _openAmount);
+        }
+
+        private const float CacheInterval = 0.5f;
+        private const float SkipVehicleScanDistSq = 400f; // 20m - when player far from doors, use position only
+        private static float _lastCacheTime;
+        private static Vector3 _cachedPosition;
+        private static bool _cacheValid;
+
+        /// <summary>Shared cache for player/vehicle position. Used by door animators and CameraOcclusionZone. Throttled to avoid costly FindObjectsOfType.</summary>
+        public static Vector3 GetCachedPlayerOrVehiclePosition(Player player)
+        {
+            if (player == null) return Vector3.zero;
+            var playerPos = player.Position;
+            // When far from doors, skip expensive vehicle scan
+            float distSqToWarehouse = (playerPos - new Vector3(-23f, 0f, 170f)).sqrMagnitude;
+            if (distSqToWarehouse > SkipVehicleScanDistSq)
+            {
+                float distSqToGarage = (playerPos - new Vector3(-18f, 0f, 185f)).sqrMagnitude;
+                if (distSqToGarage > SkipVehicleScanDistSq)
+                    return playerPos;
+            }
+            float now = Time.time;
+            if (!_cacheValid || now - _lastCacheTime >= CacheInterval)
+            {
+                var vehiclePos = TryGetDrivenVehiclePosition(player);
+                _cachedPosition = vehiclePos ?? playerPos;
+                _cacheValid = true;
+                _lastCacheTime = now;
+            }
+            return _cachedPosition;
+        }
+
+        private static System.Type _cachedLandVehicleType;
+        private static PropertyInfo _cachedDriverPlayerProp;
+
+        private static Vector3? TryGetDrivenVehiclePosition(Player player)
+        {
+            try
+            {
+                if (_cachedLandVehicleType == null)
+                {
+                    var asm = Assembly.Load("Assembly-CSharp");
+                    _cachedLandVehicleType = asm?.GetType("ScheduleOne.Vehicles.LandVehicle") ?? asm?.GetType("LandVehicle");
+                    if (_cachedLandVehicleType != null)
+                        _cachedDriverPlayerProp = _cachedLandVehicleType.GetProperty("DriverPlayer", BindingFlags.Public | BindingFlags.Instance)
+                            ?? _cachedLandVehicleType.GetProperty("Driver", BindingFlags.Public | BindingFlags.Instance);
+                }
+                if (_cachedLandVehicleType == null || _cachedDriverPlayerProp == null) return null;
+
+                var vehicles = Object.FindObjectsOfType(_cachedLandVehicleType);
+                foreach (var v in vehicles)
+                {
+                    if (v == null) continue;
+                    var driver = _cachedDriverPlayerProp.GetValue(v);
+                    if (driver != null && driver.Equals(player))
+                    {
+                        var tr = (v as Component)?.transform;
+                        if (tr != null) return tr.position;
+                        var posProp = v.GetType().GetProperty("Position", BindingFlags.Public | BindingFlags.Instance);
+                        if (posProp?.PropertyType == typeof(Vector3))
+                            return (Vector3)posProp.GetValue(v);
+                        return null;
+                    }
+                }
+            }
+            catch { }
+            return null;
         }
     }
 }

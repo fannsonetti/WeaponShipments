@@ -31,6 +31,7 @@ namespace WeaponShipments.Data
             public bool Area7Triggered = false;
 
             public bool AwaitingWakeup = false;
+            public bool DealCompleteAwaitingSleep = false;
             public bool AwaitingWarehouseTalk = false;
             public bool AwaitingVeeperTeleport = false;
 

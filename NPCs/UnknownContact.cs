@@ -1,7 +1,12 @@
+using MelonLoader;
 using S1API.Entities;
 using S1API.Messaging;
+using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using WeaponShipments.Quests;
+using WeaponShipments.Utils;
 
 namespace WeaponShipments.NPCs
 {
@@ -12,14 +17,65 @@ namespace WeaponShipments.NPCs
 
         protected override void ConfigurePrefab(NPCPrefabBuilder builder)
         {
-            builder.WithIdentity("ws_unknown_contact", "Unknown", "Contact")
-                .WithIcon(null);
+            var icon = QuestIconLoader.Load("unknown_contact.png");
+            builder.WithIdentity("ws_unknown_contact", "Unknown", "")
+                .WithIcon(icon);
         }
 
         protected override void OnCreated()
         {
             base.OnCreated();
             Instance = this;
+            ConversationCanBeHidden = true;
+            MelonCoroutines.Start(ApplyUnknownContactStyleOnce());
+        }
+
+        private IEnumerator ApplyUnknownContactStyleOnce()
+        {
+            yield return new WaitForSeconds(2f);
+            try
+            {
+                ClearConversationCategoriesViaReflection();
+                var icon = QuestIconLoader.Load("unknown_contact.png");
+                if (icon != null)
+                {
+                    Icon = icon;
+                    RefreshMessagingIcons();
+                }
+            }
+            catch (System.Exception ex)
+            {
+                MelonLogger.Warning($"[UnknownContact] ApplyUnknownContactStyle: {ex.Message}");
+            }
+        }
+
+        private void ClearConversationCategoriesViaReflection()
+        {
+            try
+            {
+                var s1NpcField = typeof(NPC).GetField("S1NPC", BindingFlags.NonPublic | BindingFlags.Instance);
+                var s1Npc = s1NpcField?.GetValue(this);
+                if (s1Npc != null)
+                {
+                    var catsField = s1Npc.GetType().GetField("ConversationCategories", BindingFlags.Public | BindingFlags.Instance);
+                    var cats = catsField?.GetValue(s1Npc) as IList;
+                    cats?.Clear();
+
+                    var msgConvField = s1Npc.GetType().GetField("MSGConversation", BindingFlags.Public | BindingFlags.Instance);
+                    var msgConv = msgConvField?.GetValue(s1Npc);
+                    if (msgConv != null)
+                    {
+                        var t = msgConv.GetType();
+                        var convCats = t.GetProperty("Categories", BindingFlags.Public | BindingFlags.Instance)?.GetValue(msgConv) as IList
+                            ?? t.GetField("Categories", BindingFlags.Public | BindingFlags.Instance)?.GetValue(msgConv) as IList;
+                        convCats?.Clear();
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                MelonLogger.Warning($"[UnknownContact] ClearConversationCategoriesViaReflection: {ex.Message}");
+            }
         }
 
         public void SendIntro()
@@ -56,7 +112,7 @@ namespace WeaponShipments.NPCs
             {
                 Label = "ok_response",
                 Text = "Don’t waste my time.",
-                OnTriggered = () => QuestManager.AgentMeetup(),
+                OnTriggered = () => WeaponShipments.Quests.QuestManager.AgentMeetup(),
             };
 
             SendTextMessage(
@@ -68,7 +124,7 @@ namespace WeaponShipments.NPCs
             public void SendWho()
         {
             SendTextMessage("Thats none of your concern.");
-            QuestManager.AgentMeetup();
+            WeaponShipments.Quests.QuestManager.AgentMeetup();
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections;
 using MelonLoader;
 using S1API.Vehicles;
 using UnityEngine;
@@ -57,28 +58,53 @@ namespace WeaponShipments.Services
             return GameObject.Find("equipmentcar"); // migration
         }
 
+        /// <summary>Prepares the warehouse Veeper for a sell job. Does not teleport – van stays where it is; only sets player-owned so the player drives it to the dropoff.</summary>
         public static void PrepareForSellJob(Vector3 spawnPosition, Quaternion spawnRotation)
         {
             var go = GetWarehouseVeeper();
             if (go == null) return;
 
             var root = go.transform.root != null ? go.transform.root.gameObject : go;
-            root.transform.position = spawnPosition;
-            root.transform.rotation = spawnRotation;
             root.name = "deliveryvan";
             SetVehicleOwned(root, true);
         }
 
         public static void ReturnAfterSellJob()
         {
+            MelonCoroutines.Start(ReturnAfterSellJobDelayed());
+        }
+
+        private static IEnumerator ReturnAfterSellJobDelayed()
+        {
+            const float delayMinutes = 5f;
+            float elapsed = 0f;
+            while (elapsed < delayMinutes * 60f)
+            {
+                yield return new WaitForSeconds(1f);
+                elapsed += 1f;
+            }
+
+            while (CameraOcclusionZone.IsPlayerInWarehouseZone())
+            {
+                MelonLogger.Msg("[WarehouseVeeper] Player in warehouse zone – waiting 10s before teleporting van.");
+                yield return new WaitForSeconds(10f);
+            }
+
             var go = GetWarehouseVeeper();
-            if (go == null) return;
+            if (go == null) yield break;
 
             var root = go.transform.root != null ? go.transform.root.gameObject : go;
             root.transform.position = DefaultPosition;
             root.transform.rotation = DefaultRotation;
             root.name = "equipmentvan";
             SetVehicleOwned(root, false);
+            MelonLogger.Msg("[WarehouseVeeper] Van returned to warehouse after sell job.");
+        }
+
+        /// <summary>Set vehicle to unowned. Call when sell job completes so the player doesn't keep the van.</summary>
+        public static void SetVehicleUnowned(GameObject vehicleRoot)
+        {
+            SetVehicleOwned(vehicleRoot, false);
         }
 
         private static void SetVehicleOwned(GameObject vehicleRoot, bool owned)

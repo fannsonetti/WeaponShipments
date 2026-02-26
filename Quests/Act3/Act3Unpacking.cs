@@ -18,7 +18,7 @@ namespace WeaponShipments.Quests
         protected override bool AutoBegin => false;
         protected override Sprite? QuestIcon => WeaponShipments.Utils.QuestIconLoader.Load("quest_unpacking.png");
 
-        private static readonly Vector3 ArchieWarehousePos = new Vector3(-30.9878f, -3.87f, 171.478f);
+        private static readonly Vector3 ArchieWarehousePos = new Vector3(-30.9878f, -3.8f, 171.478f);
 
         private bool _tickHooked;
         private int _snapshotResupplyStarted;
@@ -146,6 +146,17 @@ namespace WeaponShipments.Quests
 
         /// <summary>True if Unpacking is currently handling the sell step (Stage 6).</summary>
         internal bool IsHandlingSell => Stage == 6;
+
+        /// <summary>Update quest entries with sell job pickup/delivery when a sell spawns during Stage 6.</summary>
+        internal void UpdateSellObjectives(Vector3 pickupPos, string pickupLabel, Vector3 deliveryPos, string deliveryLabel)
+        {
+            if (Stage != 6 || QuestEntries.Count < 6) return;
+            QuestEntries[5].Complete();
+            AddEntry($"Pick up stock at the {pickupLabel}", pickupPos);
+            AddEntry($"Deliver stock to the {deliveryLabel}", deliveryPos);
+            if (QuestEntries.Count >= 2)
+                QuestEntries[QuestEntries.Count - 2].Begin();
+        }
 
         /// <summary>Called when player completes Archie's Unpacking intro dialogue.</summary>
         internal void AdvanceFromTalkToArchie()

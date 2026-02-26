@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Reflection;
 using MelonLoader;
 using S1API.Entities;
 using UnityEngine;
@@ -35,60 +34,13 @@ namespace WeaponShipments.Services
                 && p.z >= BoxMin.z && p.z <= BoxMax.z;
         }
 
-        private static readonly Vector3 ZoneCenter = new Vector3(-23.5f, 0f, 172f);
-        private const float VehicleScanRadius = 25f;
-
+        /// <summary>Uses shared throttled cache from WarehouseDoorReplacer - no FindObjectsOfType here.</summary>
         private static bool IsPlayerOrDrivenVehicleInZone()
         {
             var player = Player.Local;
-            if (player != null && IsPointInBox(player.Position))
-                return true;
-
-            if (player != null && Vector3.Distance(player.Position, ZoneCenter) > VehicleScanRadius)
-                return false;
-
-            var landVehicleType = GetLandVehicleType();
-            if (landVehicleType == null) return false;
-
-            var vehicles = Object.FindObjectsOfType(landVehicleType);
-            foreach (var v in vehicles)
-            {
-                if (v == null) continue;
-                var tr = (v as Component)?.transform;
-                if (tr == null) continue;
-                if (!IsPointInBox(tr.position)) continue;
-
-                var isOccupied = GetLandVehicleBool(v, "IsOccupied");
-                var driverPlayer = GetLandVehicleObject(v, "DriverPlayer");
-                if (isOccupied || driverPlayer != null)
-                    return true;
-            }
-            return false;
-        }
-
-        private static System.Type _cachedLandVehicleType;
-
-        private static System.Type GetLandVehicleType()
-        {
-            if (_cachedLandVehicleType != null) return _cachedLandVehicleType;
-            var asm = System.Reflection.Assembly.Load("Assembly-CSharp");
-            _cachedLandVehicleType = asm?.GetType("ScheduleOne.Vehicles.LandVehicle") ?? asm?.GetType("LandVehicle");
-            return _cachedLandVehicleType;
-        }
-
-        private static bool GetLandVehicleBool(object vehicle, string propName)
-        {
-            if (vehicle == null) return false;
-            var prop = vehicle.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
-            if (prop?.PropertyType != typeof(bool)) return false;
-            return (bool)prop.GetValue(vehicle);
-        }
-
-        private static object GetLandVehicleObject(object vehicle, string propName)
-        {
-            if (vehicle == null) return null;
-            var prop = vehicle.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
-            return prop?.GetValue(vehicle);
+            if (player == null) return false;
+            var pos = WeaponShipments.WarehouseDoorAnimator.GetCachedPlayerOrVehiclePosition(player);
+            return IsPointInBox(pos);
         }
 
         private static void SetZoneVisibility(bool inside)
@@ -158,7 +110,7 @@ namespace WeaponShipments.Services
 
                 if (lastInside.HasValue && lastInside.Value == inside)
                 {
-                    yield return new WaitForSeconds(0.5f);
+                    yield return new WaitForSeconds(1f);
                     continue;
                 }
 
@@ -168,10 +120,13 @@ namespace WeaponShipments.Services
                 if (inside)
                     OnPlayerEnteredZone?.Invoke();
                 MelonLogger.Msg($"[CameraOcclusionZone] Player {(inside ? "entered" : "left")} zone. useOcclusionCulling = {!inside}.");
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(1f);
             }
         }
 
         public static event System.Action OnPlayerEnteredZone;
+
+        /// <summary>Returns true if the player (or their driven vehicle) is inside the warehouse culling zone.</summary>
+        public static bool IsPlayerInWarehouseZone() => IsPlayerOrDrivenVehicleInZone();
     }
 }

@@ -439,7 +439,9 @@ namespace WeaponShipments.Services
             string chosenDropoff = SpawnSellDeliveryArea(stockAmount, payout, d);
 
             var unpacking = WeaponShipments.Quests.QuestManager.GetUnpackingQuest();
-            if (unpacking == null || !unpacking.IsHandlingSell)
+            if (unpacking != null && unpacking.IsHandlingSell)
+                unpacking.UpdateSellObjectives(sp.Position, sp.Label, d.Position, d.Label);
+            else
                 WeaponShipments.Quests.QuestManager.StartSellRun(sp.Position, sp.Label, d.Position, d.Label);
             Agent28.NotifySellJobStart(sp.Label, isVehicleJob, chosenDropoff);
         }
@@ -482,7 +484,12 @@ namespace WeaponShipments.Services
                     {
                         isCorrectCarrier = true;
 
-                        if (!_sellJobUsedWarehouseVeeper)
+                        if (_sellJobUsedWarehouseVeeper)
+                        {
+                            var vehicleRoot = _sellVehicleObject.transform.root != null ? _sellVehicleObject.transform.root.gameObject : _sellVehicleObject;
+                            WarehouseVeeperManager.SetVehicleUnowned(vehicleRoot);
+                        }
+                        else
                         {
                             var vehicle = VehicleRegistry.GetByName(_sellVehicleObject.name);
                             if (vehicle != null)

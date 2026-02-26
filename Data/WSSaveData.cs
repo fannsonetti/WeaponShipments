@@ -23,6 +23,10 @@ namespace WeaponShipments.Data
             public int Stage = 0;
             public bool Sent1900 = false;
             public bool Revealed2200 = false;
+            public bool MissedMeetupWindowToday = false;
+            public bool SentUrgency10 = false;
+            public bool SentUrgency1130 = false;
+            public bool SentUrgency1230 = false;
         }
 
         [Serializable]

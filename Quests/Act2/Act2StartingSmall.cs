@@ -120,6 +120,7 @@ namespace WeaponShipments.Quests
 
         private static readonly Vector3 DocksPos = new Vector3(-98.23f, -1.535f, -38.7985f);
         private static readonly Vector3 WarehouseDeliveryPOI = new Vector3(-60.308f, -1.535f, 35.6748f);
+        private static readonly Vector3 WarehouseStashPOI = new Vector3(-26f, -4.3f, 173.5f);
         private static readonly Vector3 EquipmentPos = new Vector3(-48.5173f, -2.1f, 40.4007f);
 
         private static readonly Vector3 ManorWaypoint = new Vector3(166.4817f, 10.9525f, -78.4776f);
@@ -211,6 +212,7 @@ namespace WeaponShipments.Quests
         private static bool _area6Triggered;
         private static bool _area7Triggered;
         private static readonly List<GameObject> _cartelVehicles = new List<GameObject>();
+        private static int _cartelVehicleCounter;
 
         private bool _timeHooksAttached = false;
         private bool _loadedFromSave = false;
@@ -361,45 +363,45 @@ namespace WeaponShipments.Quests
                             MelonLogger.Msg("[Act2] Player at manor – defeat the goons.");
                         }
                     }
-                    else if (Stage == 8)
+                }
+                else if (Stage == 8)
+                {
+                    _manorGoons.RemoveAll(g => g == null || !g.IsConscious);
+                    if (_manorGoons.Count == 0)
                     {
-                        _manorGoons.RemoveAll(g => g == null || !g.IsConscious);
-                        if (_manorGoons.Count == 0)
-                        {
-                            if (QuestEntries.Count >= 7) QuestEntries[6].Complete();
-                            if (QuestEntries.Count >= 8) QuestEntries[7].Begin();
-                            SetEntry8Objective("Go stash the Veeper in your warehouse");
-                            Agent28.Instance?.SendTextMessage("Go stash the Veeper in your warehouse.");
-                            Stage = 9;
-                            SetManorVeeperPlayerOwned(true);
-                            DisableOfficers();
-                            MelonCoroutines.Start(SpawnCartelAreasDelayed());
-                            MelonLogger.Msg("[Act2] Goons defeated – stash Veeper in warehouse.");
-                        }
+                        if (QuestEntries.Count >= 7) QuestEntries[6].Complete();
+                        if (QuestEntries.Count >= 8) QuestEntries[7].Begin();
+                        SetEntry8Objective("Go stash the Veeper in your warehouse");
+                        Agent28.Instance?.SendTextMessage("Go stash the Veeper in your warehouse.");
+                        Stage = 9;
+                        SetManorVeeperPlayerOwned(true);
+                        DisableOfficers();
+                        MelonCoroutines.Start(SpawnCartelAreasDelayed());
+                        MelonLogger.Msg("[Act2] Goons defeated – stash Veeper in warehouse.");
                     }
-                    else if (Stage == 9)
+                }
+                else if (Stage == 9)
+                {
+                    TrySpawnCheckpointGoonsOnEquipmentCarProximity();
+                }
+                else if (Stage == 10)
+                {
+                    var equipmentCar = GameObject.Find("equipmentvan");
+                    var vanPos = equipmentCar != null
+                        ? (equipmentCar.transform.root != null ? equipmentCar.transform.root.position : equipmentCar.transform.position)
+                        : (Vector3?)null;
+                    if (vanPos.HasValue && Vector3.Distance(vanPos.Value, WarehouseDeliveryPOI) <= 3f)
                     {
-                        TrySpawnCheckpointGoonsOnEquipmentCarProximity();
-                    }
-                    else if (Stage == 10)
-                    {
-                        var equipmentCar = GameObject.Find("equipmentvan");
-                        var vanPos = equipmentCar != null
-                            ? (equipmentCar.transform.root != null ? equipmentCar.transform.root.position : equipmentCar.transform.position)
-                            : (Vector3?)null;
-                        if (vanPos.HasValue && Vector3.Distance(vanPos.Value, WarehouseDeliveryPOI) <= 3f)
-                        {
-                            if (QuestEntries.Count >= 9) QuestEntries[8].Complete();
-                            Stage = 11;
-                            Complete();
-                            SetWeaponManufacturingUnlocked();
-                            SetManorVeeperPlayerOwned(false);
-                            DeleteCartelVehicles();
-                            WarpNpcGameObjectByName("Agent 28", Agent28WarehousePos, Agent28WarehouseRot, "Agent28 warehouse");
-                            Agent28.SetDefaultDialogueActive();
-                            Agent28.Instance?.SendTextMessage(BlackMarketDeliveryAgent28Message);
-                            MelonLogger.Msg("[Act2] Truck delivered to black market – quest complete.");
-                        }
+                        if (QuestEntries.Count >= 9) QuestEntries[8].Complete();
+                        Stage = 11;
+                        Complete();
+                        SetWeaponManufacturingUnlocked();
+                        SetManorVeeperPlayerOwned(false);
+                        DeleteCartelVehicles();
+                        WarpNpcGameObjectByName("Agent 28", Agent28WarehousePos, Agent28WarehouseRot, "Agent28 warehouse");
+                        Agent28.SetDefaultDialogueActive();
+                        Agent28.Instance?.SendTextMessage(BlackMarketDeliveryAgent28Message);
+                        MelonLogger.Msg("[Act2] Truck delivered to black market – quest complete.");
                     }
                 }
             }
@@ -488,7 +490,12 @@ namespace WeaponShipments.Quests
                     SetPersistentAreaTriggered(4);
                     SetPlayerWantedDeadOrAlive();
                 }
-                else if (i == 4) { _area6Triggered = true; SetPersistentAreaTriggered(6); }
+                else if (i == 4)
+                {
+                    _area6Triggered = true;
+                    SetPersistentAreaTriggered(6);
+                    SetPlayerWantedDeadOrAlive();
+                }
 
                 WarpAndActivateCheckpointGoons(i);
                 MelonLogger.Msg($"[Act2] Checkpoint {i + 1} goons activated: {_checkpointGoons.Count} goons.");
@@ -542,9 +549,12 @@ namespace WeaponShipments.Quests
                     if (prop != null && prop.CanWrite && prop.PropertyType == typeof(string))
                     {
                         prop.SetValue(entry, text);
-                        return;
+                        break;
                     }
                 }
+                var posProp = t.GetProperty("Position", BindingFlags.Public | BindingFlags.Instance);
+                if (posProp != null && posProp.CanWrite)
+                    posProp.SetValue(entry, text.Contains("stash") ? WarehouseStashPOI : LoseTheCartelMarkerPos);
             }
             catch { /* ignore */ }
         }
@@ -788,7 +798,13 @@ namespace WeaponShipments.Quests
                     MelonCoroutines.Start(EnsureAgent28DialogueWhenReady());
                     break;
                 case 3:
-                    TeleportMeetupNpcsToDocks();
+                    MelonCoroutines.Start(TeleportMeetupNpcsToDocksWhenReady(forHireArchie: false));
+                    break;
+                case 4:
+                    MelonCoroutines.Start(TeleportMeetupNpcsToDocksWhenReady(forHireArchie: true));
+                    break;
+                case 6:
+                    SpawnManorVeeper();
                     break;
                 case 7:
                     SpawnManorVeeper();
@@ -975,12 +991,38 @@ namespace WeaponShipments.Quests
             v.IsPlayerOwned = false;
             var rot = Quaternion.Euler(rotEuler.x, rotEuler.y, rotEuler.z);
             v.Spawn(pos, rot);
-            var go = v.GetType().GetProperty("GameObject", BindingFlags.Public | BindingFlags.Instance)?.GetValue(v) as GameObject;
+            GameObject go = v.GetType().GetProperty("GameObject", BindingFlags.Public | BindingFlags.Instance)?.GetValue(v) as GameObject;
+            if (go == null)
+                go = FindVehicleRootNearPosition(pos, vehicleCode);
             if (go != null)
             {
                 var root = go.transform.root != null ? go.transform.root.gameObject : go;
+                _cartelVehicleCounter++;
+                root.name = $"cartelvehicle_{_cartelVehicleCounter}";
                 _cartelVehicles.Add(root);
             }
+        }
+
+        private static GameObject FindVehicleRootNearPosition(Vector3 pos, string vehicleCode)
+        {
+            const float radius = 3f;
+            GameObject best = null;
+            float bestDist = float.MaxValue;
+            foreach (var obj in Object.FindObjectsOfType<GameObject>())
+            {
+                if (obj == null || !obj.activeInHierarchy) continue;
+                var root = obj.transform.root != null ? obj.transform.root.gameObject : obj;
+                if (root.name.IndexOf(vehicleCode, System.StringComparison.OrdinalIgnoreCase) < 0
+                    && !root.name.Contains("Clone"))
+                    continue;
+                float d = Vector3.Distance(root.transform.position, pos);
+                if (d <= radius && d < bestDist)
+                {
+                    bestDist = d;
+                    best = root;
+                }
+            }
+            return best;
         }
 
         private static void DeleteCartelVehicles()
@@ -1001,6 +1043,7 @@ namespace WeaponShipments.Quests
 
         private static void SpawnAllCartelAreas()
         {
+            _cartelVehicleCounter = 0;
             SpawnCartelVehicle("Hotbox", true, Area1HotboxPos, Area1HotboxRot);
             foreach (var v in Area2Vehicles)
                 SpawnCartelVehicle(v.code, v.black, v.pos, v.rot);
@@ -1155,6 +1198,15 @@ namespace WeaponShipments.Quests
                 MelonLogger.Msg("[Act2] Veeper teleported to warehouse after sleep (painted white).");
             }
 
+            if (Stage == 1 && Saved != null)
+            {
+                Saved.MissedMeetupWindowToday = false;
+                Saved.SentUrgency10 = false;
+                Saved.SentUrgency1130 = false;
+                Saved.SentUrgency1230 = false;
+                Agent28.SetMeetupDialogueActive();
+            }
+
             if (Stage != 1) return;
             if (!AwaitingWakeup) return;
 
@@ -1172,7 +1224,41 @@ namespace WeaponShipments.Quests
 
             if (Stage == 1)
             {
-                if (!Sent1900 && t >= 1123)
+                if (Saved != null && Saved.MissedMeetupWindowToday)
+                {
+                    if (t >= 1300)
+                    {
+                        Agent28.SetDefaultDialogueActive();
+                    }
+                    return;
+                }
+
+                if (t >= 1300)
+                {
+                    if (Saved != null) Saved.MissedMeetupWindowToday = true;
+                    Agent28.Instance?.SendTextMessage("I don't have time for this.");
+                    Agent28.SetDefaultDialogueActive();
+                    MelonLogger.Msg("[Act2] Meetup window missed at 13:00 – sleep to retry.");
+                    return;
+                }
+
+                if (Saved != null && !Saved.SentUrgency1230 && t >= 1230)
+                {
+                    Saved.SentUrgency1230 = true;
+                    Agent28.Instance?.SendTextMessage("I'm leaving in 30 minutes. You coming or not?");
+                }
+                else if (Saved != null && !Saved.SentUrgency1130 && t >= 1130)
+                {
+                    Saved.SentUrgency1130 = true;
+                    Agent28.Instance?.SendTextMessage("I'm not waiting around all day. Get a move on.");
+                }
+                else if (Saved != null && !Saved.SentUrgency10 && t >= 1000)
+                {
+                    Saved.SentUrgency10 = true;
+                    Agent28.Instance?.SendTextMessage("I don't got all day.");
+                }
+
+                if (!Sent1900 && t >= 1900)
                 {
                     Sent1900 = true;
                     _waitForEmployeeEntry?.Complete();
@@ -1207,7 +1293,7 @@ namespace WeaponShipments.Quests
             }
         }
 
-        private static readonly Vector3 ArchieWarehousePos = new Vector3(-30.9878f, -3.87f, 171.478f);
+        private static readonly Vector3 ArchieWarehousePos = new Vector3(-30.9878f, -3.8f, 171.478f);
         private static readonly Quaternion ArchieWarehouseRot = Quaternion.Euler(0f, 90f, 0f);
         private static readonly Vector3 Agent28WarehousePos = new Vector3(-23.0225f, -5f, 170.31f);
         private static readonly Quaternion Agent28WarehouseRot = Quaternion.Euler(0f, 310f, 0f);
@@ -1224,6 +1310,36 @@ namespace WeaponShipments.Quests
             WarpNpcGameObjectByName("ArchieWS", archiePos, archieRot, "Archie warped");
             WarpNpcGameObjectByName("MannyWS", mannyPos, faceRot, "Manny warped");
             WarpNpcGameObjectByName("IgorWS", igorPos, faceRot, "Igor warped");
+        }
+
+        private IEnumerator TeleportMeetupNpcsToDocksWhenReady(bool forHireArchie = false)
+        {
+            Vector3 archiePos = new Vector3(-97.7585f, -2.5f, -37.1382f);
+            Vector3 mannyPos = new Vector3(-98.5142f, -2.5f, -36.5701f);
+            Vector3 igorPos = new Vector3(-98.8593f, -2.5f, -36f);
+            Quaternion faceRot = Quaternion.Euler(0f, 200f, 0f);
+            Quaternion archieRot = Quaternion.Euler(0f, 240f, 0f);
+
+            bool archieDone = false, mannyDone = false, igorDone = false;
+            for (int i = 0; i < 30; i++)
+            {
+                if (!archieDone && WarpNpcGameObjectByNameOnce("ArchieWS", archiePos, archieRot, "Archie docks"))
+                    archieDone = true;
+                if (!mannyDone && WarpNpcGameObjectByNameOnce("MannyWS", mannyPos, faceRot, "Manny docks"))
+                    mannyDone = true;
+                if (!igorDone && WarpNpcGameObjectByNameOnce("IgorWS", igorPos, faceRot, "Igor docks"))
+                    igorDone = true;
+                if (archieDone && mannyDone && igorDone)
+                {
+                    if (forHireArchie)
+                        Archie.SetMeetupDialogueActive();
+                    else
+                        Manny.SetMeetupDialogueActive();
+                    yield break;
+                }
+                yield return new WaitForSeconds(1f);
+            }
+            MelonLogger.Warning("[Act2] TeleportMeetupNpcsToDocksWhenReady timed out – some NPCs may not have spawned.");
         }
 
         private static IEnumerator WarpArchieMannyIgorWhenReady()

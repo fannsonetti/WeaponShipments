@@ -31,6 +31,8 @@ namespace WeaponShipments.Quests
         }
 
         private static readonly Vector3 LandlordPos = new Vector3(-35f, -3.5f, 168f);
+        private static readonly Vector3 Agent28WarehousePos = new Vector3(-23.0225f, -5f, 170.31f);
+        private static readonly Vector3 ArchieWarehousePos = new Vector3(-30.9878f, -3.8f, 171.478f);
 
         /// <summary>Called when player buys garage from landlord.</summary>
         public void PurchaseGarage()
@@ -38,7 +40,10 @@ namespace WeaponShipments.Quests
             if (QuestEntries.Count >= 1) QuestEntries[0].Complete();
             if (Stage < 2) Stage = 2;
             if (QuestEntries.Count >= 2) QuestEntries[1].Begin();
-            MelonLogger.Msg("[Act3] Garage purchased; advancing to equipment step.");
+            if (QuestEntries.Count >= 3) QuestEntries[2].Begin();
+            WeaponShipments.NPCs.Agent28.SetMovingUpDialogueActive();
+            CustomNPCTest.NPCs.Archie.SetMovingUpDialogueActive();
+            MelonLogger.Msg("[Act3] Garage purchased; talk to Archie and Agent 28.");
         }
 
         protected override void OnLoaded()
@@ -46,6 +51,14 @@ namespace WeaponShipments.Quests
             base.OnLoaded();
             if (QuestEntries.Count == 0)
                 CreateEntries();
+            if (Stage >= 2)
+            {
+                var entries = QuestEntries;
+                if (entries != null && entries.Count >= 2)
+                    WeaponShipments.NPCs.Agent28.SetMovingUpDialogueActive();
+                if (entries != null && entries.Count >= 3)
+                    CustomNPCTest.NPCs.Archie.SetMovingUpDialogueActive();
+            }
         }
 
         protected override void OnCreated()
@@ -58,8 +71,8 @@ namespace WeaponShipments.Quests
         private void CreateEntries()
         {
             AddEntry("Buy the garage from the landlord", LandlordPos);
-            AddEntry("Buy equipment for the garage", LandlordPos);
-            AddEntry("Hire more people", LandlordPos);
+            AddEntry("Talk to Agent 28", Agent28WarehousePos);
+            AddEntry("Talk to Archie", ArchieWarehousePos);
         }
     }
 }

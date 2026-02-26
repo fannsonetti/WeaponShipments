@@ -70,24 +70,6 @@ namespace CustomNPCTest.NPCs
                     av.WithAccessoryLayer("Avatar/Accessories/Head/Oakleys/Oakleys", new Color(0.151f, 0.151f, 0.151f));
                 })
                 .WithSpawnPosition(spawnPos)
-                .WithCustomerDefaults(cd =>
-                {
-                    cd.WithSpending(minWeekly: 1f, maxWeekly: 1f)
-                        .WithOrdersPerWeek(1, 1)
-                        .WithPreferredOrderDay(Day.Saturday)
-                        .WithOrderTime(0500)
-                        .WithStandards(CustomerStandard.VeryHigh)
-                        .AllowDirectApproach(true)
-                        .GuaranteeFirstSample(false)
-                        .WithMutualRelationRequirement(minAt50: 5.0f, maxAt100: 5.0f)
-                        .WithCallPoliceChance(0.0f)
-                        .WithDependence(baseAddiction: 0.0f, dependenceMultiplier: 0.0f)
-                        .WithAffinities(new[]
-                        {
-                            (DrugType.Marijuana, -1f), (DrugType.Methamphetamine, -1f), (DrugType.Shrooms, -1), (DrugType.Cocaine, -1f)
-                        })
-                        .WithPreferredProperties();
-                })
                 .WithRelationshipDefaults(r =>
                 {
                     r.WithDelta(5.0f)
@@ -155,9 +137,56 @@ namespace CustomNPCTest.NPCs
             Instance.ActivateMeetupDialogue();
         }
 
+        private const string MOVINGUP_CONTAINER = "Archie_MovingUp";
+        private static bool _movingUpDialogueRegistered;
+
+        public static void SetMovingUpDialogueActive()
+        {
+            if (Instance == null) return;
+            Instance.RegisterMovingUpDialogue();
+            Instance.ActivateMovingUpDialogue();
+        }
+
+        private void RegisterMovingUpDialogue()
+        {
+            if (_movingUpDialogueRegistered) return;
+            _movingUpDialogueRegistered = true;
+            Dialogue.BuildAndRegisterContainer(MOVINGUP_CONTAINER, c =>
+            {
+                c.AddNode("ENTRY",
+                    "More space means more throughput. I'll help get things running once the equipment's in place.",
+                    ch => ch.Add("OK", "Alright.", "EXIT"));
+                c.AddNode("EXIT", "");
+            });
+            Dialogue.OnChoiceSelected("OK", () =>
+            {
+                var quest = QuestManager.GetMovingUpQuest();
+                if (quest != null && quest.QuestEntries.Count >= 3)
+                    quest.QuestEntries[2].Complete();
+                ActivateDefaultDialogue();
+            });
+        }
+
+        private void ActivateMovingUpDialogue()
+        {
+            RegisterMovingUpDialogue();
+            Dialogue.UseContainerOnInteract(MOVINGUP_CONTAINER);
+        }
+
         public static void SetDialogueFromUnpackingState()
         {
             if (Instance == null) return;
+
+            var movingUp = QuestManager.GetMovingUpQuest();
+            if (movingUp != null && movingUp.Stage >= 2)
+            {
+                var entries = movingUp.QuestEntries;
+                if (entries != null && entries.Count >= 3)
+                {
+                    SetMovingUpDialogueActive();
+                    return;
+                }
+            }
 
             var quest = QuestManager.GetUnpackingQuest();
             if (quest == null)
@@ -358,6 +387,7 @@ namespace CustomNPCTest.NPCs
             try
             {
                 Instance = this;
+                ConversationCanBeHidden = true;
 
                 base.OnCreated();
                 RenameSpawnedGameObject();

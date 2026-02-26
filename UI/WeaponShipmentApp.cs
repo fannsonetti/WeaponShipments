@@ -26,6 +26,12 @@ namespace WeaponShipments.UI
     {
         public static WeaponShipmentApp Instance { get; private set; }
 
+        private static GameObject _tvLoginPanel;
+        private static GameObject _tvPropertySelectPanel;
+        private static GameObject _tvHomePanel;
+        private static Transform _tvPropertySelectCardsContainer;
+        private static bool _buildingForTV;
+
         private static bool _conversionRoutineStarted;
         private static bool _raidRoutineStarted;
 
@@ -162,6 +168,78 @@ namespace WeaponShipments.UI
             catch (Exception ex)
             {
                 Error($"[WeaponShipmentApp] UI build failed: {ex}");
+            }
+        }
+
+        /// <summary>Builds the same UI (login, property select, simplified home) into the TV app container.</summary>
+        public void BuildUIIntoTarget(Transform container)
+        {
+            if (container == null) return;
+            try
+            {
+                _buildingForTV = true;
+
+                _tvLoginPanel = UIFactory.Panel("TVLoginPanel", container, new Color(0.1f, 0.1f, 0.1f), fullAnchor: true);
+                BuildLoginUI(_tvLoginPanel.transform);
+
+                _tvPropertySelectPanel = UIFactory.Panel("TVPropertySelectPanel", container, new Color(0.1f, 0.1f, 0.1f), fullAnchor: true);
+                _tvPropertySelectPanel.SetActive(false);
+                BuildPropertySelectUI(_tvPropertySelectPanel.transform);
+
+                _tvHomePanel = UIFactory.Panel("TVHomePanel", container, new Color(0.08f, 0.08f, 0.08f), fullAnchor: true);
+                _tvHomePanel.SetActive(false);
+                BuildTVHomePanel(_tvHomePanel.transform);
+
+                _buildingForTV = false;
+            }
+            catch (Exception ex)
+            {
+                _buildingForTV = false;
+                Error($"[WeaponShipmentApp] BuildUIIntoTarget failed: {ex}");
+            }
+        }
+
+        private void BuildTVHomePanel(Transform parent)
+        {
+            var bg = UIFactory.Panel("TVMainBG", parent, new Color(0.06f, 0.06f, 0.06f), fullAnchor: true);
+            var topBar = UIFactory.Panel("TVTopBar", bg.transform, new Color(0.07f, 0.07f, 0.07f), new Vector2(0f, 0.9f), new Vector2(1f, 1f));
+            var topRT = topBar.GetComponent<RectTransform>();
+            topRT.offsetMin = Vector2.zero;
+            topRT.offsetMax = Vector2.zero;
+
+            var (backGO, backBtn, backLabel) = UIFactory.RoundedButtonWithLabel("TVBackToPropertySelect", "←", topBar.transform, new Color(0.35f, 0.0f, 0.0f), 36, 36, 18, Color.white);
+            var backRT = backGO.GetComponent<RectTransform>();
+            backRT.anchorMin = new Vector2(0f, 0.5f);
+            backRT.anchorMax = new Vector2(0f, 0.5f);
+            backRT.pivot = new Vector2(0f, 0.5f);
+            backRT.anchoredPosition = new Vector2(10f, 0f);
+            backRT.sizeDelta = new Vector2(36f, 36f);
+            if (backLabel != null) backLabel.alignment = TextAnchor.MiddleCenter;
+            ButtonUtils.AddListener(backBtn, OnBackToPropertySelectClicked);
+
+            var brandingArea = UIFactory.Panel("TVBrandingArea", topBar.transform, new Color(0, 0, 0, 0));
+            var brandingRT = brandingArea.GetComponent<RectTransform>();
+            brandingRT.anchorMin = new Vector2(0f, 0f);
+            brandingRT.anchorMax = new Vector2(0.55f, 1f);
+            brandingRT.offsetMin = new Vector2(55f, 0f);
+            brandingRT.offsetMax = Vector2.zero;
+            CreateBrandingLogo(brandingArea.transform, 26, 16);
+
+            var contentArea = UIFactory.Panel("TVContentArea", bg.transform, new Color(0.05f, 0.05f, 0.05f), new Vector2(0f, 0f), new Vector2(1f, 0.9f));
+            var contentRT = contentArea.GetComponent<RectTransform>();
+            contentRT.offsetMin = Vector2.zero;
+            contentRT.offsetMax = Vector2.zero;
+
+            var msg = UIFactory.Text("TVUsePhoneMsg", "Disruption Logistics\n\nUse your phone for full access.", contentArea.transform, 24);
+            msg.color = Color.white;
+            msg.alignment = TextAnchor.MiddleCenter;
+            var msgRT = msg.GetComponent<RectTransform>();
+            if (msgRT != null)
+            {
+                msgRT.anchorMin = new Vector2(0.1f, 0.3f);
+                msgRT.anchorMax = new Vector2(0.9f, 0.7f);
+                msgRT.offsetMin = Vector2.zero;
+                msgRT.offsetMax = Vector2.zero;
             }
         }
 
@@ -333,9 +411,12 @@ namespace WeaponShipments.UI
 
             h.padding = new RectOffset(6, 6, 6, 6);
 
-            _propertySelectCardsContainer = cards.transform;
+            if (_buildingForTV)
+                _tvPropertySelectCardsContainer = cards.transform;
+            else
+                _propertySelectCardsContainer = cards.transform;
 
-            _propertySelectNoOwnedText = UIFactory.Text(
+            var noOwnedText = UIFactory.Text(
                 "PropertySelectNoOwnedText",
                 "NO PROPERTIES OWNED",
                 cube.transform,
@@ -343,25 +424,34 @@ namespace WeaponShipments.UI
                 TextAnchor.MiddleCenter,
                 FontStyle.Bold
             );
-            _propertySelectNoOwnedText.color = new Color(0.9f, 0.9f, 0.9f);
-            var noneRT = _propertySelectNoOwnedText.GetComponent<RectTransform>();
+            noOwnedText.color = new Color(0.9f, 0.9f, 0.9f);
+            var noneRT = noOwnedText.GetComponent<RectTransform>();
             noneRT.anchorMin = new Vector2(0.05f, 0.02f);
             noneRT.anchorMax = new Vector2(0.95f, 0.10f);
             noneRT.offsetMin = Vector2.zero;
             noneRT.offsetMax = Vector2.zero;
+
+            if (!_buildingForTV)
+                _propertySelectNoOwnedText = noOwnedText;
 
             RefreshPropertySelectCards();
         }
 
         private void RefreshPropertySelectCards()
         {
-            if (_propertySelectCardsContainer == null)
+            RefreshPropertySelectCardsInto(_propertySelectCardsContainer);
+            RefreshPropertySelectCardsInto(_tvPropertySelectCardsContainer);
+        }
+
+        private void RefreshPropertySelectCardsInto(Transform container)
+        {
+            if (container == null)
                 return;
 
             // Clear existing
-            for (int i = _propertySelectCardsContainer.childCount - 1; i >= 0; i--)
+            for (int i = container.childCount - 1; i >= 0; i--)
             {
-                var child = _propertySelectCardsContainer.GetChild(i);
+                var child = container.GetChild(i);
                 if (child != null)
                     UnityEngine.Object.Destroy(child.gameObject);
             }
@@ -375,7 +465,7 @@ namespace WeaponShipments.UI
             {
                 anyOwned = true;
                 CreatePropertyCard(
-                    _propertySelectCardsContainer,
+                    container,
                     BusinessState.PropertyType.Warehouse,
                     "Warehouse",
                     LoadPropertyImage("warehouse.png"),
@@ -388,7 +478,7 @@ namespace WeaponShipments.UI
             {
                 anyOwned = true;
                 CreatePropertyCard(
-                    _propertySelectCardsContainer,
+                    container,
                     BusinessState.PropertyType.Garage,
                     "Garage",
                     LoadPropertyImage("garage.png"),
@@ -401,7 +491,7 @@ namespace WeaponShipments.UI
             {
                 anyOwned = true;
                 CreatePropertyCard(
-                    _propertySelectCardsContainer,
+                    container,
                     BusinessState.PropertyType.Bunker,
                     "Bunker",
                     LoadPropertyImage("bunker.png"),
@@ -409,7 +499,10 @@ namespace WeaponShipments.UI
                 );
             }
 
-            if (_propertySelectNoOwnedText != null)
+            var noOwned = container.parent?.Find("PropertySelectNoOwnedText");
+            if (noOwned != null)
+                noOwned.gameObject.SetActive(!anyOwned);
+            else if (_propertySelectNoOwnedText != null)
                 _propertySelectNoOwnedText.gameObject.SetActive(!anyOwned);
         }
 
@@ -634,6 +727,9 @@ namespace WeaponShipments.UI
 
             if (_propertySelectPanel != null) _propertySelectPanel.SetActive(false);
             if (_homePanel != null) _homePanel.SetActive(true);
+            if (_tvPropertySelectPanel != null) _tvPropertySelectPanel.SetActive(false);
+            if (_tvHomePanel != null) _tvHomePanel.SetActive(true);
+            if (_tvLoginPanel != null) _tvLoginPanel.SetActive(false);
 
             SetActivePage(_homePage);
             UpdateBars();
@@ -645,6 +741,9 @@ namespace WeaponShipments.UI
         {
             if (_loginPanel != null) _loginPanel.SetActive(false);
             if (_propertySelectPanel != null) _propertySelectPanel.SetActive(true);
+            if (_tvLoginPanel != null) _tvLoginPanel.SetActive(false);
+            if (_tvPropertySelectPanel != null) _tvPropertySelectPanel.SetActive(true);
+            if (_tvHomePanel != null) _tvHomePanel.SetActive(false);
 
             RefreshPropertySelectCards();
         }
@@ -654,6 +753,9 @@ namespace WeaponShipments.UI
             // Return from the in-app UI to the property selection screen.
             if (_homePanel != null) _homePanel.SetActive(false);
             if (_propertySelectPanel != null) _propertySelectPanel.SetActive(true);
+            if (_tvHomePanel != null) _tvHomePanel.SetActive(false);
+            if (_tvPropertySelectPanel != null) _tvPropertySelectPanel.SetActive(true);
+            if (_tvLoginPanel != null) _tvLoginPanel.SetActive(false);
 
             RefreshPropertySelectCards();
 
@@ -3138,6 +3240,11 @@ namespace WeaponShipments.UI
 
         private Sprite LoadEmbeddedIcon()
         {
+            return LoadAppIcon();
+        }
+
+        internal static Sprite LoadAppIcon()
+        {
             try
             {
                 var asm = Assembly.GetExecutingAssembly();
@@ -3160,7 +3267,7 @@ namespace WeaponShipments.UI
             }
             catch (Exception ex)
             {
-                Warning($"[WeaponShipmentApp] Failed to load icon: {ex}");
+                MelonLogger.Warning($"[WeaponShipmentApp] Failed to load icon: {ex}");
             }
 
             return null;

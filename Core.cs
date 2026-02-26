@@ -184,5 +184,6 @@ namespace WeaponShipments
             gar.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
             MelonLogger.Msg("[WeaponShipments] Created teleport locations NorthWarehouse and Garage.");
         }
+
     }
 }
